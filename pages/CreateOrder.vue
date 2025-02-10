@@ -1,10 +1,93 @@
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useSupabaseClient } from '#imports'
+
+const supabase = useSupabaseClient()
+
+const products = ref([]) // Ürünler
+const productOptions = ref([]) // Tüm ürün seçenekleri (priorities)
+const currentOrder = ref([]) // Sipariş edilen ürünler
+const orders = ref([]) // Onaylanan siparişler
+
+// 📌 Ürünleri Supabase'den çek
+const fetchProducts = async () => {
+  const { data, error } = await supabase.from('products').select('*')
+  if (error) console.error('Ürünler alınırken hata:', error)
+  else products.value = data
+}
+
+// 📌 Tüm ürün seçeneklerini (priorities) çek
+const fetchProductOptions = async () => {
+  const { data, error } = await supabase.from('product_options').select('*')
+  if (error) console.error('Ürün seçenekleri alınırken hata:', error)
+  else productOptions.value = data
+}
+
+// 📌 Seçilen ürüne göre filtreleme yap
+const getFilteredOptions = (productId) => {
+  return productOptions.value.filter(option => option.product_id === productId)
+}
+
+// 📌 Sayfa açıldığında verileri çek
+onMounted(() => {
+  fetchProducts()
+  fetchProductOptions()
+})
+
+// 📌 Ürün seçildiğinde sipariş listesine ekle
+const handleProductClick = (product, toggle) => {
+  currentOrder.value.push({
+    product,
+    count: 1,
+    priority: null, // Seçenekler için boş başlangıç
+  })
+  toggle && toggle()
+}
+
+// 📌 Siparişten çıkar
+const cancelOrder = (item) => {
+  currentOrder.value = currentOrder.value.filter(i => i !== item)
+}
+
+// 📌 Siparişi onayla
+const applyAllOrders = () => {
+  currentOrder.value.forEach(item => {
+    const newOrder = {
+      id: Date.now() + Math.random(), // Benzersiz ID
+      product: item.product,
+      time: new Date().toLocaleTimeString(),
+      status: 'Uygulandı',
+      count: item.count,
+      priority: item.priority,
+    }
+    orders.value.push(newOrder)
+  })
+  currentOrder.value = []
+}
+
+// **Tablo Başlıkları**
+const ordersHeaders = [
+  { text: 'Ürün Adı', value: 'product' },
+  { text: 'Fiyat', value: 'cost' },
+  { text: 'Zaman', value: 'time' },
+  { text: 'Durum', value: 'status' },
+  { text: 'Seçenek', value: 'priority' },
+]
+
+const orderDetailsHeaders = [
+  { text: 'Ürün Adı', value: 'product' },
+  { text: 'Adet', value: 'count' },
+  { text: 'Öncelik', value: 'priority' },
+  { text: 'İşlemler', value: 'actions', sortable: false },
+]
+</script>
+
 <template>
   <v-app>
     <v-container fluid class="px-6"> 
-      <!-- Main Content: Product Menu and Orders -->
       <v-row class="mt-4" justify="center">
 
-        <!-- Product Menu Column -->
+        <!-- Ürün Menüsü -->
         <v-col cols="12" md="4">
           <v-card outlined>
             <v-card-title class="text-h6">Ürün Menüsü</v-card-title>
@@ -47,10 +130,11 @@
           </v-card>
         </v-col>
 
-        <!-- Orders Section -->
+        <!-- Sipariş Bölümü -->
         <v-col cols="12" md="6">
-          <v-row class="d-flex justify-center ">
-            <!-- Order Details Table -->
+          <v-row class="d-flex justify-center">
+            
+            <!-- Sipariş Detayları -->
             <v-col cols="12" md="12" class="mb-4">
               <v-card outlined class="menu-scrollable">
                 <v-card-title>Sipariş Detayları</v-card-title>
@@ -75,15 +159,13 @@
                       ></v-text-field>
                     </template>
                     <template v-slot:item.priority="{ item }">
-                      <v-select
-  v-model="item.priority"
-  :items="priorities"
-  item-title="text"
-  item-value="value"
-  dense
-  hide-details
-  style="max-width: 150px;"
-></v-select>
+                      <v-select 
+                        v-model="item.priority"
+                        :items="getFilteredOptions(item.product.id)"
+                        item-title="name"
+                        item-value="id"
+                        label="Seçenekler"
+                      />
                     </template>
                     <template v-slot:item.actions="{ item }">
                       <v-btn color="error" @click="cancelOrder(item)" small>
@@ -91,7 +173,6 @@
                       </v-btn>
                     </template>
                   </v-data-table>
-                  <!-- Kaydet Button below the table -->
                   <div class="text-right mt-3">
                     <v-btn color="primary" @click="applyAllOrders" small>
                       Kaydet
@@ -101,7 +182,7 @@
               </v-card>
             </v-col>
 
-            <!-- Orders Table -->
+            <!-- Siparişler Tablosu -->
             <v-col cols="12" md="12">
               <v-card outlined class="menu-scrollable">
                 <v-card-title>Siparişler</v-card-title>
@@ -119,12 +200,13 @@
                       ${{ item.product.cost }}
                     </template>
                     <template v-slot:item.priority="{ item }">
-                      {{ getPriorityText(item.priority) }}
+                      {{ item.priority ? item.priority : 'Seçilmedi' }}
                     </template>
                   </v-data-table>
                 </v-card-text>
               </v-card>
             </v-col>
+
           </v-row>
         </v-col>
 
@@ -133,84 +215,8 @@
   </v-app>
 </template>
 
-<script setup>
-import { ref } from 'vue'
 
-// Headers for the Orders table
-const ordersHeaders = [
-  { text: 'Ürün Adı', value: 'product' },
-  { text: 'Fiyat', value: 'cost' },
-  { text: 'Zaman', value: 'time' },
-  { text: 'Durum', value: 'status' },
-  { text: 'Öncelik', value: 'priority' },
-]
 
-// Headers for the Order Details table, now with a Priority column.
-const orderDetailsHeaders = [
-  { text: 'Ürün Adı', value: 'product' },
-  { text: 'Adet', value: 'count' },
-  { text: 'Öncelik', value: 'priority' },
-  { text: 'İşlemler', value: 'actions', sortable: false },
-]
-
-// Example list of products.
-const products = ref([
-  { id: 1, name: 'Ürün A', cost: 10, icon: '/icon.png' },
-  { id: 2, name: 'Ürün B', cost: 15, icon: '/icon.png' },
-  { id: 3, name: 'Ürün C', cost: 20, icon: '/icon.png' },
-  // Add more products as needed
-])
-
-// List of orders that have been "saved"
-const orders = ref([])
-
-// List of products added to order details.
-const currentOrder = ref([])
-
-// List of priority options (using Turkish labels)
-const priorities = [
-  { text: 'Şekersiz', value: 'no_sugar' },
-  { text: 'Normal', value: 'normal' },
-  { text: 'Az Şekerli', value: 'less_sugar' },
-  { text: 'Çok Şekerli', value: 'more_sugar' }
-]
-
-// When clicking a product, always add a new row with a default priority.
-function handleProductClick(product, toggle) {
-  currentOrder.value.push({ product, count: 1, priority: 'normal' })
-  toggle && toggle()
-}
-
-// Remove an individual order detail row.
-function cancelOrder(item) {
-  const index = currentOrder.value.findIndex(i => i === item)
-  if (index !== -1) {
-    currentOrder.value.splice(index, 1)
-  }
-}
-
-// Apply (save) all current order details to the orders table and clear them.
-function applyAllOrders() {
-  currentOrder.value.forEach(item => {
-    const newOrder = {
-      id: Date.now() + Math.random(), // Ensure a unique id
-      product: item.product,
-      time: new Date().toLocaleTimeString(),
-      status: 'Uygulandı',
-      count: item.count,
-      priority: item.priority
-    }
-    orders.value.push(newOrder)
-  })
-  currentOrder.value = []
-}
-
-// Utility function to get priority display text from its value.
-function getPriorityText(value) {
-  const option = priorities.find(p => p.value === value)
-  return option ? option.text : value
-}
-</script>
 
 <style scoped>
 .v-toolbar {
