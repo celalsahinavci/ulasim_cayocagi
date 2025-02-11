@@ -1,126 +1,31 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useSupabaseClient } from '#imports'
+import { onMounted } from 'vue'
+import { useFunctions } from '@/composables/useFunctions'
 
-const supabase = useSupabaseClient()
+const {
+  products,
+  productOptions,
+  currentOrder,
+  orders,
+  fetchProducts,
+  fetchProductOptions,
+  getFilteredOptions,
+  handleProductClick,
+  cancelOrder,
+  countErrorMessage,
+  applyAllOrders,
+} = useFunctions()
 
-const products = ref([]) // Ürünler
-const productOptions = ref([]) // Tüm ürün seçenekleri (priorities)
-const currentOrder = ref([]) // Sipariş edilen ürünler
-const orders = ref([]) // Onaylanan siparişler
-
-// 📌 Ürünleri Supabase'den çek
-const fetchProducts = async () => {
-  const { data, error } = await supabase.from('products').select('*')
-  if (error) {
-    console.error('Ürünler alınırken hata:', error.message)
-    alert('Ürünler alınırken hata oluştu. Lütfen tekrar deneyin.')
-  } else {
-    products.value = data
-  }
-}
-
-// 📌 Tüm ürün seçeneklerini (priorities) çek
-const fetchProductOptions = async () => {
-  const { data, error } = await supabase.from('product_options').select('*')
-  if (error) {
-    console.error('Ürün seçenekleri alınırken hata:', error.message)
-    alert('Ürün seçenekleri alınırken hata oluştu. Lütfen tekrar deneyin.')
-  } else {
-    productOptions.value = data
-  }
-}
-
-const optionsCache = new Map()
-
-
-// 📌 Seçilen ürüne göre filtreleme yap
-const getFilteredOptions = (productId) => {
-  if (optionsCache.has(productId)) {
-    // Eğer cache'de varsa, doğrudan döndürüyoruz
-    return optionsCache.get(productId)
-  } else {
-    // Cache'de yoksa, filtreyi uygulayıp cache'e ekliyoruz
-    const filteredOptions = productOptions.value.filter(option => option.product_id === productId)
-    optionsCache.set(productId, filteredOptions)
-    return filteredOptions
-  }
-}
-
-// 📌 Sayfa açıldığında verileri çek
 onMounted(() => {
   fetchProducts()
   fetchProductOptions()
 })
-
-// 📌 Ürün seçildiğinde sipariş listesine ekle
-const handleProductClick = (product, toggle) => {
-  currentOrder.value.push({
-    product,
-    count: 1,
-    priority: null, // Seçenekler için boş başlangıç
-  })
-  toggle && toggle()
-}
-
-// 📌 Siparişten çıkar
-const cancelOrder = (item) => {
-  currentOrder.value = currentOrder.value.filter(i => i !== item)
-}
-
-const countErrorMessage = computed(() => {
-  return currentOrder.value.some(item => item.count < 1) ? 'Adet en az 1 olmalı!' : ''
-})
-
-// 📌 Siparişi onayla
-const applyAllOrders = () => {
-  if (currentOrder.value.length === 0) {
-    alert('Sipariş listeniz boş. Lütfen en az bir ürün ekleyin.')
-    return
-  }
-
-  currentOrder.value.forEach(item => {
-    if (!item.product || !item.priority || item.count < 1) {
-      alert('Eksik veya hatalı veri var. Lütfen tüm bilgileri doldurduğunuzdan emin olun.')
-      return
-    }
-
-    const newOrder = {
-      id: Date.now() + Math.random(), // Benzersiz ID
-      product: item.product,
-      time: new Date().toLocaleTimeString(),
-      status: 'Uygulandı',
-      count: item.count,
-      priority: item.priority,
-    }
-    orders.value.push(newOrder)
-  })
-  currentOrder.value = []
-}
-
-
-// **Tablo Başlıkları**
-const ordersHeaders = [
-  { text: 'Ürün Adı', value: 'product' },
-  { text: 'Fiyat', value: 'cost' },
-  { text: 'Zaman', value: 'time' },
-  { text: 'Durum', value: 'status' },
-  { text: 'Seçenek', value: 'priority' },
-]
-
-const orderDetailsHeaders = [
-  { text: 'Ürün Adı', value: 'product' },
-  { text: 'Adet', value: 'count' },
-  { text: 'Öncelik', value: 'priority' },
-  { text: 'İşlemler', value: 'actions', sortable: false },
-]
 </script>
 
 <template>
   <v-app>
     <v-container fluid class="px-6"> 
       <v-row class="mt-4" justify="center">
-        <!-- Ürün Menüsü -->
         <v-col cols="12" md="4">
           <v-card outlined>
             <v-card-title class="text-h6">Ürün Menüsü</v-card-title>
@@ -163,11 +68,8 @@ const orderDetailsHeaders = [
           </v-card>
         </v-col>
 
-        <!-- Sipariş Bölümü -->
-        <v-col cols="12" md="6">
+        <v-col cols="12" md="5">
           <v-row class="d-flex justify-center">
-            
-            <!-- Sipariş Detayları -->
             <v-col cols="12" md="12" class="mb-4">
               <v-card outlined class="menu-scrollable">
                 <v-card-title>Sipariş Detayları</v-card-title>
@@ -226,7 +128,6 @@ const orderDetailsHeaders = [
               </v-card>
             </v-col>
 
-            <!-- Siparişler Tablosu -->
             <v-col cols="12" md="12">
               <v-card outlined class="menu-scrollable">
                 <v-card-title>Siparişler</v-card-title>
@@ -260,31 +161,28 @@ const orderDetailsHeaders = [
   </v-app>
 </template>
 
-
-
 <style scoped>
 .v-toolbar {
   margin-bottom: 16px;
 }
 
 .menu-scrollable {
-  max-height: 500px; /* Set max height */
-  overflow-y: auto; /* Enable scrolling if content exceeds max height */
+  max-height: 500px;
+  overflow-y: auto;
 }
 
 .card-spacing {
-  margin-bottom: 20px; /* Adjust as needed */
+  margin-bottom: 20px;
 }
 
-/* Styling for product cards */
 .v-card {
   cursor: pointer;
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1); /* Yumuşak gölge */
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease-in-out;
 }
 
 .v-card:hover {
-  transform: translateY(-4px); /* Hover efekti ile kartı biraz yukarı kaydırma */
+  transform: translateY(-4px);
 }
 
 .v-card img {
@@ -296,41 +194,41 @@ const orderDetailsHeaders = [
 }
 
 .v-col {
-  margin-bottom: 24px; /* Kartlar arasında daha fazla boşluk bırakma */
+  margin-bottom: 24px;
 }
 
 .v-row {
-  margin-top: 24px; /* Üst kısımdan biraz boşluk bırakma */
+  margin-top: 24px;
 }
 
 .v-btn.error:hover {
-  background-color: #ff5252; /* Hover sırasında kırmızı tonunda renk değişimi */
-  transform: scale(1.1); /* Butonun biraz büyümesi */
+  background-color: #ff5252;
+  transform: scale(1.1);
 }
 
 .v-btn.primary:hover {
-  background-color: #4caf50; /* Hover sırasında yeşil tonunda renk değişimi */
-  transform: scale(1.1); /* Butonun biraz büyümesi */
+  background-color: #4caf50;
+  transform: scale(1.1);
 }
 .v-data-table tbody tr:hover {
-  background-color: #f5f5f5; /* Hover sırasında satır rengini değiştirme */
+  background-color: #f5f5f5;
 }
 
 .v-data-table th {
-  background-color: #fafafa; /* Başlıkların arka planını açık yapma */
-  color: #333; /* Başlık rengini koyu yapma */
+  background-color: #fafafa;
+  color: #333;
   font-weight: bold;
 }
 
 .v-data-table td {
-  padding: 10px; /* Hücrelere daha fazla boşluk ekleyerek daha temiz bir görünüm sağlama */
+  padding: 10px;
 }
 .v-btn {
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .v-btn:hover {
-  background-color: #ff4081; /* Hover sırasında renk değişimi */
-  transform: scale(1.05); /* Hover sırasında buton büyüme efekti */
+  background-color: #ff4081;
+  transform: scale(1.05);
 }
 </style>
