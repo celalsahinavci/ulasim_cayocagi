@@ -14,9 +14,10 @@
                   <v-text-field
                     v-model="newProduct.name"
                     label="Ürün Adı"
-                    required
+                    :rules="[nameRequired]"
                     outlined
                     dense
+                    required
                   ></v-text-field>
                   <v-textarea
                     v-model="newProduct.description"
@@ -28,9 +29,10 @@
                     v-model.number="newProduct.price"
                     label="Fiyat"
                     type="number"
-                    required
+                    :rules="[priceRequired]"
                     outlined
                     dense
+                    required
                   ></v-text-field>
   
                   <!-- Product Options Section -->
@@ -44,9 +46,10 @@
                       <v-text-field
                         v-model="option.name"
                         label="Seçenek Adı"
-                        required
+                        :rules="[optionNameRequired]"
                         outlined
                         dense
+                        required
                       ></v-text-field>
                     </v-col>
                     <v-col cols="2" class="d-flex align-center">
@@ -55,9 +58,10 @@
                       </v-btn>
                     </v-col>
                   </v-row>
+  
                   <v-btn
                     @click="addProduct"
-                    :disabled="!productFormValid"
+                    :disabled="!isProductValid || !isOptionsValid"
                     color="primary"
                     block
                     class="mt-4"
@@ -136,6 +140,26 @@
                           </v-btn>
                         </v-col>
                       </v-row>
+  
+                      <!-- Product Options Section -->
+                      <v-row dense v-for="(option, index) in product.options" :key="index" class="mt-2">
+                        <v-col cols="10">
+                          <v-text-field
+                            v-model="option.name"
+                            label="Seçenek Adı"
+                            :disabled="!product.isEditing"
+                            :rules="[optionNameRequired]"
+                            outlined
+                            dense
+                            required
+                          ></v-text-field>
+                        </v-col>
+                        <v-col cols="2" class="d-flex align-center">
+                          <v-btn @click="removeOptionField(product, index)" color="error" icon :disabled="!product.isEditing">
+                            <v-icon>mdi-delete</v-icon>
+                          </v-btn>
+                        </v-col>
+                      </v-row>
                     </v-list-item-content>
                   </v-list-item>
                   <v-alert v-if="products.length === 0" type="info">
@@ -151,7 +175,7 @@
   </template>
   
   <script setup>
-  import { ref, reactive, onMounted } from 'vue'
+  import { ref, reactive, onMounted, computed } from 'vue'
   import { useSupabaseClient } from '#imports'
   import { useFunctions } from '#imports'
   
@@ -177,8 +201,25 @@
   const products = ref([]) // List of existing products
   const productFormValid = ref(false)
   
+  // Validation rules
+  const nameRequired = (value) => !!value || 'Ürün adı gereklidir'
+  const priceRequired = (value) => value > 0 || 'Fiyat gereklidir'
+  const optionNameRequired = (value) => !!value || 'Seçenek adı gereklidir'
+  
+  // Check if product is valid before adding
+  const isProductValid = computed(() => {
+    return newProduct.name && newProduct.price > 0
+  })
+  
+  // Check if options are valid before adding
+  const isOptionsValid = computed(() => {
+    return newProductOptions.value.length > 0 && newProductOptions.value.every(option => option.name.trim() !== '')
+  })
+  
   // Add a new product
   const addProduct = async () => {
+    if (!isProductValid.value || !isOptionsValid.value) return // Don't add if invalid
+  
     // Insert new product into 'products' table and return the new record
     const { data, error } = await supabase.from('products').insert([{
       name: newProduct.name,
@@ -216,12 +257,16 @@
   
   // Fetch existing products from 'products' table
   const fetchProducts = async () => {
-    const { data, error } = await supabase.from('products').select('*')
+    const { data, error } = await supabase.from('products').select('*, product_options(name)') // Fetch product options as well
     if (error) {
       console.error('Ürünler alınırken hata:', error.message)
     } else {
       // Initialize each product's `isEditing` property to false
-      products.value = data.map(product => ({ ...product, isEditing: false }))
+      products.value = data.map(product => ({
+        ...product,
+        isEditing: false,
+        options: product.product_options || [] // Add the product options to each product
+      }))
     }
   }
   
@@ -236,23 +281,45 @@
   // Toggle edit mode for a product (and update it if saving)
   const toggleEdit = async (product) => {
     if (!product.isEditing) {
-      // Entering edit mode: store a backup of the current values
-      product._backup = { name: product.name, price: product.price }
-      product.isEditing = true
+      // Entering edit mode: store a backup of the current values (name, price, and options)
+      product._backup = { 
+        name: product.name, 
+        price: product.price,
+        options: [...product.options] // backup current options
+      };
+      product.isEditing = true;
     } else {
-      // Save the changes to Supabase
+      // Save the changes to Supabase (product details)
       const { error } = await supabase
         .from('products')
         .update({ name: product.name, price: product.price })
-        .eq('id', product.id)
+        .eq('id', product.id);
+  
       if (error) {
-        console.error('Ürün güncellenirken hata:', error.message)
+        console.error('Ürün güncellenirken hata:', error.message);
       } else {
-        alert('Ürün başarıyla güncellendi!')
+        alert('Ürün başarıyla güncellendi!');
       }
+  
+      // Update the product options (if any changes were made)
+      if (product.options.length > 0) {
+        const { error: optionsError } = await supabase
+          .from('product_options')
+          .upsert(
+            product.options.map(option => ({
+              product_id: product.id,
+              name: option.name,
+            }))
+          );
+  
+        if (optionsError) {
+          console.error('Ürün seçenekleri güncellenirken hata:', optionsError.message);
+        }
+      }
+  
       // Remove backup and exit editing mode
-      delete product._backup
-      product.isEditing = false
+      delete product._backup;
+      product.isEditing = false;
     }
   }
   
@@ -261,32 +328,24 @@
     if (product._backup) {
       product.name = product._backup.name
       product.price = product._backup.price
+      product.options = [...product._backup.options]
       delete product._backup
     }
     product.isEditing = false
   }
   
-  // Add a new option field for the product being created
+  // Add a new option input field
   const addOptionField = () => {
     newProductOptions.value.push({ name: '' })
   }
   
-  // Remove an option field from the new product form
+  // Remove an option input field
   const removeOptionField = (index) => {
     newProductOptions.value.splice(index, 1)
   }
   
   onMounted(() => {
-    fetchProducts()  // Load existing products on mount
+    fetchProducts()
   })
   </script>
-  
-  <style scoped>
-  .pa-6 {
-    padding: 24px;
-  }
-  .mb-6 {
-    margin-bottom: 24px;
-  }
-  </style>
   
