@@ -1,43 +1,42 @@
 <template>
-    <div class="container">
-      <!-- Sol üst köşeye simge -->
-      <div class="fixed top-4 left-4">
+  <v-app>
+    <!-- Top Navbar -->
+    <v-app-bar app color="primary" dark>
+      <v-toolbar-title>
         <NuxtLink to="/">
-          <img src="/icon.png" alt="Logo" class="w-11 h-10" style="width: 100px; height: 100px;" />
+          <img src="/icon.png" alt="Logo" class="w-11 h-10" />
         </NuxtLink>
-      </div>
-  
-      <!-- Sayfanın içeriği buraya gelecek -->
+      </v-toolbar-title>
+
+      <v-spacer></v-spacer>
+
+      <!-- Navbar buttons -->
+      <v-btn text @click="toCreateOrder">Sipariş Oluştur</v-btn>
+      <v-btn text @click="toOrders">Siparişlerim</v-btn>
+      <v-btn text @click="toProductList">ÜRÜNLERİ DÜZENLE</v-btn>
+      <v-btn text>İstek ve Şikayet</v-btn>
+    </v-app-bar>
+
+    <!-- Main content -->
+    <v-main>
       <slot />
-      <div>
-    <v-container class="d-flex align-center" style="height: 100vh;">
-      <!-- Butonlar sol orta hizalı -->
-      <div class="position-absolute" style="left: 15px; transform: translateY(-50%); top: 40%; max-width: fit-content; ">
-        <v-btn block color="primary" class="mb-6" @click="toCreateOrder()">Sipariş Oluştur</v-btn>
-        <v-btn block color="secondary" class="mb-6" @click="toOrders()">Siparişlerim</v-btn>
-        <v-btn block color="success">İstek ve Şikayet</v-btn>
-      </div>
-      <div class="position-absolute" style="right:5px; transform: translateY(-50%); top: 40%; max-width: fit-content; ">
-        <v-btn block color="primary" class="mb-6" @click="toProductList()">ÜRÜNLERİ DÜZENLE</v-btn>
-      </div>
-    </v-container>
-  </div>
-    </div>
-  </template>
+    </v-main>
+  </v-app>
+</template>
 
 <script setup>
-import {useRouter} from 'vue-router'
-const router = useRouter();
+import { useRouter } from 'vue-router'
+const router = useRouter()
+
 const toOrders = () => {
-    router.push('/Orders')
-};
+  router.push('/Orders')
+}
+
 const toCreateOrder = () => {
-    router.push('/CreateOrder')
-};
+  router.push('/CreateOrder')
+}
 
 const toProductList = () => {
-    router.push('/ProductList')
-};
-
- </script>
-  
+  router.push('/ProductList')
+}
+</script>
