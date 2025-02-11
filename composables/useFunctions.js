@@ -92,6 +92,33 @@ export const useFunctions = () => {
     currentOrder.value = []
   }
 
+  const deleteProduct = async (productId) => {
+    const { error } = await supabase.from('products').delete().eq('id', productId)
+    if (error) {
+      console.error('Ürün silinirken hata:', error.message)
+      alert('Ürün silinemedi. Lütfen tekrar deneyin.')
+    } else {
+      products.value = products.value.filter(p => p.id !== productId) // Listeyi güncelle
+    }
+  }
+  const updateProduct = async (productId, updatedData) => {
+    const { error } = await supabase
+      .from('products')
+      .update(updatedData)
+      .eq('id', productId)
+  
+    if (error) {
+      console.error('Ürün güncellenirken hata:', error.message)
+      alert('Ürün güncellenemedi. Lütfen tekrar deneyin.')
+    } else {
+      const index = products.value.findIndex(p => p.id === productId)
+      if (index !== -1) {
+        products.value[index] = { ...products.value[index], ...updatedData } // Vue listesini güncelle
+      }
+    }
+  }
+  
+
   return {
     products,
     productOptions,
@@ -104,5 +131,7 @@ export const useFunctions = () => {
     cancelOrder,
     countErrorMessage,
     applyAllOrders,
+    deleteProduct,
+    updateProduct
   }
 }

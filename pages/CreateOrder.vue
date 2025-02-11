@@ -2,6 +2,10 @@
 import { onMounted } from 'vue'
 import { useFunctions } from '@/composables/useFunctions'
 
+definePageMeta({
+  middleware: "auth",
+});
+
 const {
   products,
   productOptions,

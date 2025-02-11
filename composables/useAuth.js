@@ -6,17 +6,30 @@ export const useAuth = () => {
 
     // Kullanıcı giriş fonksiyonu
     const signIn = async (email, password) => {
-        console.log(email, password)
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-        console.log(data)
-        if (error) throw error
-        
-        return data
-    }
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    
+      // Kullanıcının rolünü al
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role_id')
+        .eq('id', data.user.id)
+        .single();
+      
+      if (userData) {
+        const roleId = userData.role_id;
+        if (roleId === 1) return navigateTo('/CreateOrder'); // Admin
+        if (roleId === 2) return navigateTo('/siparis'); // Personel
+        if (roleId === 3) return navigateTo('/CreateOrder'); // Kullanıcı
+      }
+    
+      return navigateTo('/403'); // Rol bulunamazsa 403'e at
+    };
+    
 
     // Kullanıcı çıkış fonksiyonu
     const signOut = async () => {
-        await supabase.auth.signOut()
+      await supabase.auth.signOut();
     }
 
     // Kullanıcı Kayıt ol fonksiyonu

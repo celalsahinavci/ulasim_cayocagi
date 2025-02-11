@@ -6,24 +6,34 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
     //...
-    build: {
-      transpile: ['vuetify'],
+  build: {
+    transpile: ['vuetify'],
+  },
+  modules: [
+    (_options, nuxt) => {
+      nuxt.hooks.hook('vite:extendConfig', (config) => {
+        // @ts-expect-error
+        config.plugins.push(vuetify({ autoImport: true }))
+      })
     },
-    modules: [
-      (_options, nuxt) => {
-        nuxt.hooks.hook('vite:extendConfig', (config) => {
-          // @ts-expect-error
-          config.plugins.push(vuetify({ autoImport: true }))
-        })
-      },
-      //...
-            , '@nuxtjs/supabase',],
-    vite: {
-      vue: {
-        template: {
-          transformAssetUrls,
-        },
+    //...
+          , '@nuxtjs/supabase',],
+  vite: {
+    vue: {
+      template: {
+        transformAssetUrls,
       },
     },
+  },
+    
+  supabase: {
+    redirectOptions: {
+      login: '/login',
+      callback: '/confirm',
+      include: undefined,
+      exclude: [],
+      // cookieRedirect: false,
+    },
+  },
     
 })
