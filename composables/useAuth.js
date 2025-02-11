@@ -19,5 +19,22 @@ export const useAuth = () => {
         await supabase.auth.signOut()
     }
 
-    return { user, signIn, signOut }
+    // Kullanıcı Kayıt ol fonksiyonu
+    const useSingup = async (email, password, full_name) => {
+        const supabase = useSupabaseClient()
+        
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: { full_name },
+            },
+            email_confirm: true,
+        });
+
+        if (error) console.error("Hata oluştu: ", error);
+        else console.log("Kullanıcı kaydedildi:", data);
+    }
+
+    return { user, signIn, signOut, useSingup }
 }
