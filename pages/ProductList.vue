@@ -19,12 +19,12 @@
                   dense
                   required
                 ></v-text-field>
-                <v-textarea
+                <!-- <v-textarea
                   v-model="newProduct.description"
                   label="Açıklama"
                   outlined
                   dense
-                ></v-textarea>
+                ></v-textarea> -->
                 <v-text-field
                   v-model.number="newProduct.price"
                   label="Fiyat"
@@ -112,18 +112,39 @@
                           outlined
                           dense
                         ></v-text-field>
-                      </v-col>
-                      <v-col cols="12" sm="5" class="d-flex align-center">
+                          </v-col>
+                          <v-col cols="12" sm="1">
+                        <v-text-field
+                          v-model.number="product.price"
+                          label="Fiyat"
+                          type="number"
+                          :disabled="!product.isEditing"
+                          outlined
+                          dense
+                        ></v-text-field>
+                          </v-col>
+                        <v-col cols="12" sm="4" class="d-flex align-center">
+                        <!-- If not in edit mode, show "Düzenle" button -->
                         <v-btn
+                          v-if="!product.isEditing"
                           @click="toggleEdit(product)"
                           color="primary"
                           class="mr-2"
                           outlined
                         >
-                          <v-icon left>
-                            {{ product.isEditing ? 'mdi-content-save' : 'mdi-pencil' }}
-                          </v-icon>
-                          {{ product.isEditing ? 'Kaydet' : 'Düzenle' }}
+                          <v-icon left>mdi-pencil</v-icon>
+                          Düzenle
+                        </v-btn>
+                        <!-- When in edit mode, show a confirmation "Kaydet" button -->
+                        <v-btn
+                          v-else
+                          @click="confirmSave(product)"
+                          color="primary"
+                          class="mr-2"
+                          outlined
+                        >
+                          <v-icon left>mdi-content-save</v-icon>
+                          Kaydet
                         </v-btn>
                         <v-btn
                           v-if="product.isEditing"
@@ -135,8 +156,9 @@
                           <v-icon left>mdi-cancel</v-icon>
                           İptal
                         </v-btn>
+                        <!-- Confirm delete dialog for Sil action -->
                         <v-btn
-                          @click="deleteProduct(product.id)"
+                          @click="confirmDelete(product)"
                           color="error"
                           outlined
                         >
@@ -144,6 +166,7 @@
                           Sil
                         </v-btn>
                       </v-col>
+                      
                     </v-row>
 
                     <!-- Product Options Section (Visible only during edit mode) -->
@@ -165,8 +188,9 @@
                           ></v-text-field>
                         </v-col>
                         <v-col cols="2" class="d-flex align-center">
+                          <!-- Use confirmation dialog for deleting an option -->
                           <v-btn
-                            @click="removeOptionField(product, index)"
+                            @click="confirmRemoveOption(product, index)"
                             color="error"
                             icon
                           >
@@ -195,6 +219,24 @@
         </v-col>
       </v-row>
     </v-container>
+
+    <!-- Confirmation Dialog -->
+    <v-dialog v-model="confirmDialog.show" max-width="400">
+      <v-card>
+        <v-card-title class="headline">
+          {{ confirmDialog.message }}
+        </v-card-title>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="blue darken-1" text @click="confirmDialog.show = false">
+            İptal
+          </v-btn>
+          <v-btn color="blue darken-1" text @click="handleConfirm">
+            Onayla
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
@@ -212,7 +254,6 @@ definePageMeta({
 // New product form data
 const newProduct = reactive({
   name: '',
-  description: '',
   price: 0,
 })
 
@@ -242,6 +283,52 @@ const isOptionsValid = computed(() => {
     newProductOptions.value.every((option) => option.name.trim() !== '')
   )
 })
+
+// Confirmation dialog reactive object
+const confirmDialog = reactive({
+  show: false,
+  message: '',
+  onConfirm: null,
+})
+
+// Helper to handle confirmation
+const handleConfirm = () => {
+  if (confirmDialog.onConfirm) {
+    confirmDialog.onConfirm()
+  }
+  confirmDialog.show = false
+}
+
+// Open confirmation dialog with given message and callback
+const openConfirmDialog = (message, onConfirm) => {
+  confirmDialog.message = message
+  confirmDialog.onConfirm = onConfirm
+  confirmDialog.show = true
+}
+
+// Confirm deletion of a product
+const confirmDelete = (product) => {
+  openConfirmDialog('Ürünü silmek istediğinize emin misiniz?', () => {
+    // Call deleteProduct from your composable
+    deleteProduct(product.id)
+    // Optionally, refresh the product list after deletion
+    fetchProducts()
+  })
+}
+
+// Confirm saving changes when editing a product
+const confirmSave = (product) => {
+  openConfirmDialog('Değişiklikleri kaydetmek istediğinize emin misiniz?', () => {
+    toggleEdit(product)
+  })
+}
+
+// Confirm removal of a product option
+const confirmRemoveOption = (product, index) => {
+  openConfirmDialog('Ürün seçeneğini silmek istediğinize emin misiniz?', async () => {
+    await removeOptionField(product, index)
+  })
+}
 
 // Add a new product
 const addProduct = async () => {
