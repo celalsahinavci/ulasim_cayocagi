@@ -10,11 +10,10 @@
 
       <v-spacer></v-spacer>
 
-      <!-- Navbar buttons -->
-      <v-btn text @click="toCreateOrder">Sipariş Oluştur</v-btn>
-      <v-btn text @click="toOrders">Siparişlerim</v-btn>
-      <v-btn text @click="toProductList">ÜRÜNLERİ DÜZENLE</v-btn>
-      <v-btn text>İstek ve Şikayet</v-btn>
+      
+      <template v-for="(item, index) in filteredMenu" :key="index">
+        <v-btn text :to="item.to">{{ item.title }}</v-btn>
+      </template>
     </v-app-bar>
 
     <!-- Main content -->
@@ -25,18 +24,38 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-const router = useRouter()
+import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { useSupabaseClient, useSupabaseUser } from '#imports';
 
-const toOrders = () => {
-  router.push('/Orders')
-}
+const route = useRoute();
+const supabase = useSupabaseClient();
+const user = useSupabaseUser();
+const role = ref(null);
 
-const toCreateOrder = () => {
-  router.push('/CreateOrder')
-}
+// Kullanıcının yetkili olduğu sayfalar
+const menuItems = [
+  { title: 'Sipariş Oluştur', to: '/CreateOrder', roles: [1,3] },
+  { title: 'Siparişlerim', to: '/Orders', roles: [1, 2] },
+  { title: 'ÜRÜNLERİ DÜZENLE', to: '/ProductList', roles: [1, 2] },
+  { title: 'Profil', to: '/profil', roles: [1, 2, 3] }, 
+];
 
-const toProductList = () => {
-  router.push('/ProductList')
-}
+// Kullanıcının rolünü al
+const fetchUserRole = async () => {
+  if (!user.value) return;
+  const { data } = await supabase
+    .from('users')
+    .select('role_id')
+    .eq('id', user.value.id)
+    .single();
+  if (data) role.value = data.role_id;
+};
+
+// Menüde sadece kullanıcının erişebileceği sayfalar görünecek
+const filteredMenu = computed(() => {
+  return menuItems.filter((item) => item.roles.includes(role.value));
+});
+
+onMounted(fetchUserRole);
 </script>

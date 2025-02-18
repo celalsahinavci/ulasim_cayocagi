@@ -19,8 +19,8 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
 
   const roleId = data.role_id;
   const roleAccess = {
-    1: ['/', '/siparis', '/ProductList', '/CreateOrder', '/profil'], // Admin tüm sayfalara erişebilir
-    2: ['/siparis', '/ProductList', '/profil'], // Personel belirli sayfalara erişebilir
+    1: ['/', '/Orders', '/ProductList', '/CreateOrder', '/profil'], // Admin tüm sayfalara erişebilir
+    2: ['/Orders', '/ProductList', '/profil'], // Personel belirli sayfalara erişebilir
     3: ['/CreateOrder', '/profil'], // Kullanıcı sadece belirli sayfalara erişebilir
   };
 
