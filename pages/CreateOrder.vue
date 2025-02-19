@@ -248,7 +248,7 @@ const getStatusColor = (status) => {
         <v-col cols="12" md="8" class="d-flex">
           <v-row class="fill-height" align="stretch" justify="start">
             <!-- Sipariş Detayları -->
-            <v-col cols="12" class="mb-4">
+            <v-col cols="12" class="mb-4" v-if="currentOrder.length > 0">
               <v-card outlined class="menu-card">
                 <v-card-title class="primary--text">Sipariş Detayları</v-card-title>
                 <v-card-text>
@@ -306,7 +306,7 @@ const getStatusColor = (status) => {
             </v-col>
 
             <!-- Siparişler -->
-            <v-col cols="12">
+            <v-col cols="12" v-if="orders.length > 0">
               <v-card outlined class="menu-card">
                 <v-card-title class="primary--text">Siparişler</v-card-title>
                 <v-card-text>
