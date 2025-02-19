@@ -1,11 +1,44 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useSupabaseClient } from '#imports'
 const supabase = useSupabaseClient()
 
 definePageMeta({
   middleware: "auth",
 })
+function subscribeToOrders() {
+  const ordersChannel = supabase.channel('orders-channel')
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'orders' },
+      payload => {
+        console.log('New order inserted!', payload)
+        fetchOrders() // Update orders, e.g. by re-fetching or modifying state
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'orders' },
+      payload => {
+        console.log('Order updated!', payload)
+        fetchOrders()
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'orders' },
+      payload => {
+        console.log('Order deleted!', payload)
+        fetchOrders()
+      }
+    )
+    .subscribe()
+
+  // Unsubscribe when the component unmounts to avoid memory leaks
+  onUnmounted(() => {
+    ordersChannel.unsubscribe()
+  })
+}
 
 // Reactive variables to hold data
 const products = ref([])
@@ -51,12 +84,29 @@ async function fetchProductOptions() {
 }
 
 // Get options filtered by the given product id
-function getFilteredOptions(productId) {
-  return productOptions.value.filter(option => option.product_id === productId)
+function getFilteredOptions(productId, currentItem) {
+  // All options available for this product
+  const optionsForProduct = productOptions.value.filter(
+    option => option.product_id === productId
+  )
+
+  // Get the option IDs already selected in other order items
+  const selectedOptionIds = currentOrder.value
+    .filter(item => item !== currentItem && item.priority)
+    .map(item => item.priority)
+
+  // Return options that are not selected elsewhere.
+  // Allow the currently selected option for this item so that it isn’t removed.
+  return optionsForProduct.filter(
+    option => !selectedOptionIds.includes(option.id) || currentItem.priority === option.id
+  )
 }
+
 
 // Handle a product click: add it to currentOrder every time it's clicked.
 function handleProductClick(product, toggle) {
+ 
+ 
   currentOrder.value.push({
     product,
     count: 1,
@@ -136,6 +186,8 @@ async function applyAllOrders() {
   console.log('Order successfully saved!')
 }
 
+
+
 // Fetch orders (with their order items) from Supabase.
 // Group orders so that each order appears as a single row with a summary of items.
 async function fetchOrders() {
@@ -159,7 +211,17 @@ async function fetchOrders() {
   if (error) {
     console.error('Error fetching orders:', error)
   } else {
-    orders.value = data.map(order => {
+    // Get today's date (only date part, no time)
+    const today = new Date().toISOString().split('T')[0]
+
+    // Filter orders based on the created_at timestamp
+    orders.value = data.filter(order => {
+      // Get the date part of the created_at timestamp
+      const createdDate = order.created_at.split('T')[0]
+
+      // Compare with today's date
+      return createdDate === today
+    }).map(order => {
       // Build a summary text for all items in the order
       const orderItemsText = order.order_items.map(item => {
         const product = products.value.find(p => p.id === item.product_id)
@@ -183,10 +245,12 @@ async function fetchOrders() {
   }
 }
 
+
 onMounted(() => {
   fetchProducts()
   fetchProductOptions()
   fetchOrders()
+  subscribeToOrders() // Start listening for realtime updates on orders
 })
 
 // Function to get status color
@@ -287,14 +351,14 @@ const getStatusColor = (status) => {
 
                     <template v-slot:item.priority="{ item }">
                       <v-select
-                        v-model="item.priority"
-                        :items="getFilteredOptions(item.product.id)"
-                        item-title="name"
-                        item-value="id"
-                        label="Seçenekler"
-                        dense
-                        outlined
-                      />
+    v-model="item.priority"
+    :items="getFilteredOptions(item.product.id, item)"
+    item-title="name"
+    item-value="id"
+    label="Seçenekler"
+    dense
+    outlined
+  />
                     </template>
                     
                     <template v-slot:item.actions="{ item }">
