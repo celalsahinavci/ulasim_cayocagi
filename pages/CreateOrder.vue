@@ -26,7 +26,8 @@ const ordersHeaders = [
   { text: 'Sipariş No', value: 'order_id' },
   { text: 'Ürünler', value: 'products' },
   { text: 'Fiyat', value: 'cost' },
-  { text: 'Durum', value: 'status' }
+  { text: 'Durum', value: 'status' },
+  { text: 'Açıklama', value: 'description' }
 ]
 
 // Fetch products from Supabase
@@ -76,12 +77,15 @@ function countErrorMessage(count) {
 }
 
 // Create a new order and insert order items into Supabase
+const orderDescription = ref('')
+
+// Function to apply all orders and add description
 async function applyAllOrders() {
   if (currentOrder.value.length === 0) {
     console.warn('No order items to save.')
     return
   }
-  
+
   // Retrieve the current user's ID (adjust based on your auth setup)
   const { data: { user } } = await supabase.auth.getUser()
   const user_id = user ? user.id : null
@@ -91,13 +95,14 @@ async function applyAllOrders() {
     return total + item.count * item.product.price
   }, 0)
 
-  // Insert a new order record in the orders table
+  // Insert a new order record in the orders table, including the description
   const { data: orderData, error: orderError } = await supabase
     .from('orders')
     .insert({
       user_id,
       price: totalPrice,
-      status: 'beklemede'
+      status: 'beklemede',
+      description: orderDescription.value // Add the description here
     })
     .select()
     .single()
@@ -141,6 +146,7 @@ async function fetchOrders() {
       price,
       status,
       created_at,
+      description,
       order_items (
         product_id,
         quantity,
@@ -170,7 +176,8 @@ async function fetchOrders() {
         products: orderItemsText,
         cost: order.price,
         status: order.status,
-        created_at: order.created_at
+        created_at: order.created_at,
+        description: order.description
       }
     })
   }
@@ -297,6 +304,12 @@ const getStatusColor = (status) => {
                     </template>
                   </v-data-table>
                   <div class="text-right mt-3">
+                    <v-text-field
+                  v-model="orderDescription"
+                   label="Sipariş Açıklaması"
+                   outlined
+                   dense
+                   ></v-text-field>
                     <v-btn color="primary" @click="applyAllOrders" small>
                       Kaydet
                     </v-btn>
@@ -327,6 +340,9 @@ const getStatusColor = (status) => {
                     </template>
                     <template v-slot:item.status="{ item }">
                       <v-chip :color="getStatusColor(item.status)" dark>{{ item.status }}</v-chip>
+                    </template>
+                    <template v-slot:item.description="{ item }">
+                      {{ item.description }} 
                     </template>
                   </v-data-table>
                 </v-card-text>
