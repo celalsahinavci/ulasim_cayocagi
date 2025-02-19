@@ -38,7 +38,7 @@ const menuItems = [
   { title: 'Sipariş Oluştur', to: '/CreateOrder', roles: [1,3] },
   { title: 'Siparişlerim', to: '/Orders', roles: [1, 2] },
   { title: 'ÜRÜNLERİ DÜZENLE', to: '/ProductList', roles: [1, 2] },
-  { title: 'Profil', to: '/profil', roles: [1, 2, 3] }, 
+  { title: 'Profil', to: '/Profile', roles: [1, 2, 3] }, 
 ];
 
 // Kullanıcının rolünü al
