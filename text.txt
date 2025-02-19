@@ -5,7 +5,7 @@ CREATE TABLE roles (
     description TEXT
 );
 
--- 3. Kullanıcılar Tablosu (Supabase Auth ID'yi referans alıyor)
+-- 2. Kullanıcılar Tablosu (Supabase Auth ID'yi referans alıyor)
 CREATE TABLE users (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     isim TEXT,
@@ -15,6 +15,12 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- 3. Kullanıcıların Paraları Tablosu
+CREATE TABLE balance (
+    id UUID REFERENCES users(id) primary key,
+    bakiye DECIMAL DEFAULT 0
+)
+
 -- 4. Ürünler Tablosu
 CREATE TABLE products (
     id SERIAL PRIMARY KEY,
@@ -22,6 +28,8 @@ CREATE TABLE products (
     description TEXT,
     price DECIMAL NOT NULL,
     photo TEXT -- Fotoğraf dosya yolu
+    created_at timestamp without time zone null default now(),
+    updated_at timestamp without time zone null default now(),
 );
 
 -- 5. Ürün Seçenekleri Tablosu
@@ -33,12 +41,17 @@ CREATE TABLE product_options (
 );
 
 -- 6. Siparişler Tablosu
+-- Önce ENUM türünü oluştur
+CREATE TYPE order_status AS ENUM ('beklemede', 'onaylandı', 'reddedildi');
+
+-- Ardından tabloyu oluştur
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    status TEXT CHECK (status IN ('beklemede', 'onaylandı', 'reddedildi')) DEFAULT 'beklemede',
+    status order_status DEFAULT 'beklemede',
     price DECIMAL NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+    description text null
 );
 
 -- 7. Sipariş İçerik Tablosu
@@ -99,3 +112,32 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
 after insert on auth.users
 for each row execute function public.create_user_profile();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+storage politikaları oluşturdum bana örnek kodları verdi
+
+Add policy for the INSERT operation under the policy "Public uploads"
+CREATE POLICY "Public uploads rk11yf_1" ON storage.objects FOR INSERT TO public WITH CHECK (bucket_id = 'productimages');
+
+Add policy for the SELECT operation under the policy "Public uploads"
+CREATE POLICY "Public uploads rk11yf_0" ON storage.objects FOR SELECT TO public USING (bucket_id = 'productimages');
+
+Add policy for the UPDATE operation under the policy "Public uploads"
+CREATE POLICY "Public uploads rk11yf_2" ON storage.objects FOR UPDATE TO public USING (bucket_id = 'productimages');
+
+Add policy for the DELETE operation under the policy "Public uploads"
+CREATE POLICY "Public uploads rk11yf_3" ON storage.objects FOR DELETE TO public USING (bucket_id = 'productimages');
