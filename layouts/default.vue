@@ -36,7 +36,7 @@ const role = ref(null);
 // Kullanıcının yetkili olduğu sayfalar
 const menuItems = [
   { title: 'Sipariş Oluştur', to: '/CreateOrder', roles: [1,3] },
-  { title: 'Siparişlerim', to: '/Orders', roles: [1, 2] },
+  { title: 'Siparişler', to: '/Orders', roles: [1, 2] },
   { title: 'ÜRÜNLERİ DÜZENLE', to: '/ProductList', roles: [1, 2] },
   { title: 'Profil', to: '/Profile', roles: [1, 2, 3] }, 
 ];

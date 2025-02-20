@@ -1,8 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useSupabaseClient } from '#imports'
-import 'bootstrap/dist/css/bootstrap.min.css'
-
 const supabase = useSupabaseClient()
 
 definePageMeta({
@@ -281,109 +279,155 @@ const getStatusColor = (status) => {
 </script>
 
 <template>
-  <div class="container-fluid">
-    <div class="row">
-      <!-- Ürün Menüsü -->
-      <div class="col-12 col-md-4 mb-4">
-        <div class="card shadow-sm border-0 mt-4">
-          <div class="card-header bg-primary text-white">Ürün Menüsü</div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-6 col-md-4" v-for="product in products" :key="product.id">
-                <div class="card mb-3" @click="handleProductClick(product)" style="cursor: pointer;">
-                  <img :src="product.icon || '/icon.png'" class="card-img-top" alt="Product Image">
-                  <div class="card-body">
-                    <h5 class="card-title">{{ product.name }}</h5>
-                    <p class="card-text text-muted">{{ product.price }} ₺</p>
+  <v-app>
+    <v-container fluid class="px-0">
+      <v-row class="fill-height" align="stretch" justify="start">
+        <!-- Ürün Menüsü -->
+        <v-col cols="12" md="4" class="d-flex">
+          <v-card outlined class="menu-card flex-grow-1">
+            <v-card-title class="text-h6 primary--text">Ürün Menüsü</v-card-title>
+            <v-divider></v-divider>
+            <v-card-text class="menu-scrollable">
+              <v-item-group multiple>
+                <v-container>
+                  <v-row class="d-flex justify-center align-center">
+                    <v-col
+                      v-for="product in products"
+                      :key="product.id"
+                      cols="12" md="6" lg="4"
+                      class="my-3"
+                      style="flex-basis: 20%;"
+                    >
+                      <v-item v-slot="{ active, toggle }">
+                        <v-card
+                          :color="active ? 'light-green lighten-4' : 'white'"
+                          class="d-flex flex-column align-center hover-card"
+                          height="auto"
+                          @click="handleProductClick(product, toggle)"
+                          elevation="2"
+                        >
+                          <v-img
+                            :src="product.icon || '/icon.png'"
+                            height="150px"
+                            width="100%"
+                            alt="Product Image"
+                            class="mb-2 rounded-img"
+                          ></v-img>
+                          <div class="text-h6">{{ product.name }}</div>
+                          <div class="text-subtitle-2 mt-1">{{ product.price }} ₺</div>
+                        </v-card>
+                      </v-item>
+                    </v-col>
+                  </v-row>
+                </v-container>
+              </v-item-group>
+            </v-card-text>
+          </v-card>
+        </v-col>
+
+        <!-- Sipariş Detayları and Siparişler -->
+        <v-col cols="12" md="8" class="d-flex">
+          <v-row class="fill-height" align="stretch" justify="start">
+            <!-- Sipariş Detayları -->
+            <v-col cols="12" class="mb-4" v-if="currentOrder.length > 0">
+              <v-card outlined class="menu-card">
+                <v-card-title class="primary--text">Sipariş Detayları</v-card-title>
+                <v-card-text>
+                  <v-data-table
+                    :headers="orderDetailsHeaders"
+                    :items="currentOrder"
+                    class="elevation-1"
+                    dense
+                  >
+                    <template v-slot:item.product="{ item }">
+                      {{ item.product.name }}
+                    </template>
+                    
+                    <template v-slot:item.count="{ item }">
+                      <div class="d-flex align-center">
+                        <v-text-field
+                          v-model.number="item.count"
+                          type="number"
+                          min="1"
+                          dense
+                          hide-details
+                          class="count-input"
+                        ></v-text-field>
+                        <span class="count-price">
+                          Toplam fiyat: {{ item.count * item.product.price }} ₺
+                        </span>
+                      </div>
+                    </template>
+
+                    <template v-slot:item.priority="{ item }">
+                      <v-select
+                        v-model="item.priority"
+                        :items="getFilteredOptions(item.product.id, item)"
+                        item-title="name"
+                        item-value="id"
+                        label="Seçenekler"
+                        dense
+                        outlined
+                      />
+                    </template>
+                    
+                    <template v-slot:item.actions="{ item }">
+                      <v-btn color="error" @click="cancelOrder(item)" small>
+                        İptal
+                      </v-btn>
+                    </template>
+                  </v-data-table>
+                  <div class="text-right mt-3">
+                    <v-text-field
+                  v-model="orderDescription"
+                   label="Sipariş Açıklaması"
+                   outlined
+                   dense
+                   ></v-text-field>
+                    <v-btn color="primary" @click="applyAllOrders" small>
+                      Kaydet
+                    </v-btn>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
 
-      <!-- Sipariş Detayları -->
-      <div class="col-12 col-md-4 mb-4" >
-        <div class="card shadow-sm border-0 mt-4">
-          <div class="card-header bg-info text-white">Sipariş Detayları</div>
-          <div class="card-body">
-            <table class="table table-hover table-bordered">
-              <thead class="table-dark">
-                <tr>
-                  <th>Ürün</th>
-                  <th>Adet</th>
-                  <th>Seçenekler</th>
-                  <th>İşlemler</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in currentOrder" :key="item.product.id">
-                  <td>{{ item.product.name }}</td>
-                  <td>
-                    <input type="number" v-model.number="item.count" min="1" class="form-control w-25">
-                  </td>
-                  <td>
-                    <select v-model="item.priority" class="form-select">
-                      <option v-for="option in getFilteredOptions(item.product.id, item)" :key="option.id" :value="option.id">
-                        {{ option.name }}
-                      </option>
-                    </select>
-                  </td>
-                  <td>
-                    <button class="btn btn-danger btn-sm" @click="cancelOrder(item)">
-                      <i class="bi bi-x-circle"></i> İptal
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="d-flex justify-content-end mt-3">
-              <input v-model="orderDescription" class="form-control w-50" placeholder="Sipariş Açıklaması" />
-              <button class="btn btn-primary ms-2" @click="applyAllOrders">
-                <i class="bi bi-save"></i> Kaydet
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Siparişler -->
-      <div class="col-12 col-md-4 mb-4" >
-        <div class="card shadow-sm border-0 mt-4">
-          <div class="card-header bg-success text-white">Siparişler</div>
-          <div class="card-body">
-            <table class="table table-hover table-bordered">
-              <thead class="table-dark">
-                <tr>
-                  <th>Sipariş No</th>
-                  <th>Ürünler</th>
-                  <th>Fiyat</th>
-                  <th>Durum</th>
-                  <th>Açıklama</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="order in orders" :key="order.order_id">
-                  <td>{{ order.order_id }}</td>
-                  <td>{{ order.products }}</td>
-                  <td>{{ order.cost }} ₺</td>
-                  <td>
-                    <span :class="'badge rounded-pill bg-' + getStatusColor(order.status)">
-                      {{ order.status }}
-                    </span>
-                  </td>
-                  <td>{{ order.description }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+            <!-- Siparişler -->
+            <v-col cols="12" v-if="orders.length > 0">
+              <v-card outlined class="menu-card">
+                <v-card-title class="primary--text">Siparişler</v-card-title>
+                <v-card-text>
+                  <v-data-table
+                    :headers="ordersHeaders"
+                    :items="orders"
+                    class="elevation-1"
+                    dense
+                  >
+                    <template v-slot:item.order_id="{ item }">
+                      {{ item.order_id }}
+                    </template>
+                    <template v-slot:item.products="{ item }">
+                      {{ item.products }}
+                    </template>
+                    <template v-slot:item.cost="{ item }">
+                      {{ item.cost }} ₺
+                    </template>
+                    <template v-slot:item.status="{ item }">
+                      <v-chip :color="getStatusColor(item.status)" dark>{{ item.status }}</v-chip>
+                    </template>
+                    <template v-slot:item.description="{ item }">
+                      {{ item.description }} 
+                    </template>
+                  </v-data-table>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-col>
+      </v-row>
+    </v-container>
+  </v-app>
 </template>
-
 
 <style scoped>
 .v-toolbar {
