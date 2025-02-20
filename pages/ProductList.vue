@@ -1,243 +1,252 @@
 <template>
-  <v-app>
-    <v-container fluid class="pa-6">
-      <v-row>
+  <div>
+    <div class="container-fluid p-4">
+      <div class="row">
         <!-- Product Addition Section -->
-        <v-col cols="12" md="4">
-          <v-card outlined class="mb-6">
-            <v-card-title class="primary--text text-h6">
+        <div class="col-12 col-md-4 mb-4">
+          <div class="card border mb-3">
+            <div class="card-header text-primary h5">
               Yeni Ürün Ekle
-            </v-card-title>
-            <v-divider></v-divider>
-            <v-card-text>
-              <v-form v-model="productFormValid">
-                <v-text-field
-                  v-model="newProduct.name"
-                  label="Ürün Adı"
-                  :rules="[nameRequired]"
-                  outlined
-                  dense
-                  required
-                ></v-text-field>
-                <!-- <v-textarea
-                  v-model="newProduct.description"
-                  label="Açıklama"
-                  outlined
-                  dense
-                ></v-textarea> -->
-                <v-text-field
-                  v-model.number="newProduct.price"
-                  label="Fiyat"
-                  type="number"
-                  :rules="[priceRequired]"
-                  outlined
-                  dense
-                  required
-                ></v-text-field>
+            </div>
+            <hr class="my-0" />
+            <div class="card-body">
+              <form novalidate>
+                <div class="mb-3">
+                  <label class="form-label">Ürün Adı</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    v-model="newProduct.name"
+                    required
+                  />
+                </div>
+                <!-- <div class="mb-3">
+                  <label class="form-label">Açıklama</label>
+                  <textarea
+                    class="form-control"
+                    v-model="newProduct.description"
+                    rows="2"
+                  ></textarea>
+                </div> -->
+                <div class="mb-3">
+                  <label class="form-label">Fiyat</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    v-model.number="newProduct.price"
+                    required
+                  />
+                </div>
 
                 <!-- Product Options Section -->
-                <v-divider class="my-4"></v-divider>
-                <div class="text-subtitle-1 mb-2">Ürün Seçenekleri</div>
-                <v-btn @click="addOptionField" color="secondary" small>
-                  <v-icon left>mdi-plus</v-icon> Seçenek Ekle
-                </v-btn>
-                <v-row
-                  dense
+                <hr class="my-4" />
+                <div class="mb-2 fw-bold">Ürün Seçenekleri</div>
+                <button
+                  type="button"
+                  @click="addOptionField"
+                  class="btn btn-secondary btn-sm mb-2"
+                >
+                  <i class="bi bi-plus me-1"></i> Seçenek Ekle
+                </button>
+                <div
+                  class="row g-2 mt-2"
                   v-for="(option, index) in newProductOptions"
                   :key="index"
-                  class="mt-2"
                 >
-                  <v-col cols="10">
-                    <v-text-field
+                  <div class="col-10">
+                    <input
+                      type="text"
+                      class="form-control"
                       v-model="option.name"
-                      label="Seçenek Adı"
-                      :rules="[optionNameRequired]"
-                      outlined
-                      dense
+                      placeholder="Seçenek Adı"
                       required
-                    ></v-text-field>
-                  </v-col>
-                  <v-col cols="2" class="d-flex align-center">
-                    <v-btn @click="removeOptionField(index)" color="error" icon>
-                      <v-icon>mdi-delete</v-icon>
-                    </v-btn>
-                  </v-col>
-                </v-row>
+                    />
+                  </div>
+                  <div class="col-2 d-flex align-items-center">
+                    <button
+                      type="button"
+                      @click="removeOptionField(index)"
+                      class="btn btn-danger btn-sm"
+                    >
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
 
-                <v-btn
+                <button
+                  type="button"
                   @click="addProduct"
                   :disabled="!isProductValid || !isOptionsValid"
-                  color="primary"
-                  block
-                  class="mt-4"
+                  class="btn btn-primary w-100 mt-4"
                 >
-                  <v-icon left>mdi-content-save</v-icon> Ürün Ekle
-                </v-btn>
-              </v-form>
-            </v-card-text>
-          </v-card>
-        </v-col>
+                  <i class="bi bi-save me-1"></i> Ürün Ekle
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
 
         <!-- Product Listing Section -->
-        <v-col cols="12" md="8">
-          <v-card outlined>
-            <v-card-title class="primary--text text-h6">
+        <div class="col-12 col-md-8 mb-4">
+          <div class="card border">
+            <div class="card-header text-primary h5">
               Mevcut Ürünler
-            </v-card-title>
-            <v-divider></v-divider>
-            <v-card-text>
-              <v-list two-line>
-                <v-list-item
-                  v-for="product in products"
-                  :key="product.id"
-                  class="mb-3"
-                >
-                  <v-list-item-content>
-                    <v-row>
-                      <v-col cols="12" sm="4">
-                        <v-text-field
-                          v-model="product.name"
-                          label="Ürün Adı"
-                          :disabled="!product.isEditing"
-                          outlined
-                          dense
-                        ></v-text-field>
-                      </v-col>
-                      <v-col cols="12" sm="3">
-                        <v-text-field
-                          v-model.number="product.price"
-                          label="Fiyat"
-                          type="number"
-                          :disabled="!product.isEditing"
-                          outlined
-                          dense
-                        ></v-text-field>
-                          </v-col>
-                          <v-col cols="12" sm="1">
-                        <v-text-field
-                          v-model.number="product.price"
-                          label="Fiyat"
-                          type="number"
-                          :disabled="!product.isEditing"
-                          outlined
-                          dense
-                        ></v-text-field>
-                          </v-col>
-                        <v-col cols="12" sm="4" class="d-flex align-center">
-                        <!-- If not in edit mode, show "Düzenle" button -->
-                        <v-btn
-                          v-if="!product.isEditing"
-                          @click="toggleEdit(product)"
-                          color="primary"
-                          class="mr-2"
-                          outlined
-                        >
-                          <v-icon left>mdi-pencil</v-icon>
-                          Düzenle
-                        </v-btn>
-                        <!-- When in edit mode, show a confirmation "Kaydet" button -->
-                        <v-btn
-                          v-else
-                          @click="confirmSave(product)"
-                          color="primary"
-                          class="mr-2"
-                          outlined
-                        >
-                          <v-icon left>mdi-content-save</v-icon>
-                          Kaydet
-                        </v-btn>
-                        <v-btn
-                          v-if="product.isEditing"
-                          @click="cancelEdit(product)"
-                          color="warning"
-                          class="mr-2"
-                          outlined
-                        >
-                          <v-icon left>mdi-cancel</v-icon>
-                          İptal
-                        </v-btn>
-                        <!-- Confirm delete dialog for Sil action -->
-                        <v-btn
-                          @click="confirmDelete(product)"
-                          color="error"
-                          outlined
-                        >
-                          <v-icon left>mdi-delete</v-icon>
-                          Sil
-                        </v-btn>
-                      </v-col>
-                      
-                    </v-row>
-
-                    <!-- Product Options Section (Visible only during edit mode) -->
-                    <div v-if="product.isEditing">
-                      <v-row
-                        dense
-                        v-for="(option, index) in product.options"
-                        :key="index"
-                        class="mt-2"
+            </div>
+            <hr class="my-0" />
+            <div class="card-body">
+              <div v-if="products.length === 0" class="alert alert-info">
+                Henüz ürün eklenmemiş.
+              </div>
+              <div v-for="product in products" :key="product.id" class="mb-4 border rounded p-3">
+                <div class="row">
+                  <div class="col-12 col-sm-4 mb-2">
+                    <label class="form-label">Ürün Adı</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      v-model="product.name"
+                      :disabled="!product.isEditing"
+                    />
+                  </div>
+                  <div class="col-12 col-sm-3 mb-2">
+                    <label class="form-label">Fiyat</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      v-model.number="product.price"
+                      :disabled="!product.isEditing"
+                    />
+                  </div>
+                  <div class="col-12 col-sm-1 mb-2">
+                    <label class="form-label">Fiyat</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      v-model.number="product.price"
+                      :disabled="!product.isEditing"
+                    />
+                  </div>
+                  <div class="col-12 col-sm-4 d-flex align-items-center">
+                    <div v-if="!product.isEditing">
+                      <button
+                        type="button"
+                        @click="toggleEdit(product)"
+                        class="btn btn-primary me-2"
                       >
-                        <v-col cols="10">
-                          <v-text-field
-                            v-model="option.name"
-                            label="Seçenek Adı"
-                            :rules="[optionNameRequired]"
-                            outlined
-                            dense
-                            required
-                          ></v-text-field>
-                        </v-col>
-                        <v-col cols="2" class="d-flex align-center">
-                          <!-- Use confirmation dialog for deleting an option -->
-                          <v-btn
-                            @click="confirmRemoveOption(product, index)"
-                            color="error"
-                            icon
-                          >
-                            <v-icon>mdi-delete</v-icon>
-                          </v-btn>
-                        </v-col>
-                      </v-row>
-                      <!-- Button to add a new option for the existing product -->
-                      <v-btn
-                        @click="addOptionToProduct(product)"
-                        color="secondary"
-                        small
-                        class="mt-2"
-                      >
-                        <v-icon left>mdi-plus</v-icon> Seçenek Ekle
-                      </v-btn>
+                        <i class="bi bi-pencil me-1"></i> Düzenle
+                      </button>
                     </div>
-                  </v-list-item-content>
-                </v-list-item>
-                <v-alert v-if="products.length === 0" type="info">
-                  Henüz ürün eklenmemiş.
-                </v-alert>
-              </v-list>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
+                    <div v-else>
+                      <button
+                        type="button"
+                        @click="confirmSave(product)"
+                        class="btn btn-primary me-2"
+                      >
+                        <i class="bi bi-save me-1"></i> Kaydet
+                      </button>
+                      <button
+                        type="button"
+                        @click="cancelEdit(product)"
+                        class="btn btn-warning me-2"
+                      >
+                        <i class="bi bi-x-circle me-1"></i> İptal
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      @click="confirmDelete(product)"
+                      class="btn btn-danger"
+                    >
+                      <i class="bi bi-trash me-1"></i> Sil
+                    </button>
+                  </div>
+                </div>
 
-    <!-- Confirmation Dialog -->
-    <v-dialog v-model="confirmDialog.show" max-width="400">
-      <v-card>
-        <v-card-title class="headline">
-          {{ confirmDialog.message }}
-        </v-card-title>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" text @click="confirmDialog.show = false">
-            İptal
-          </v-btn>
-          <v-btn color="blue darken-1" text @click="handleConfirm">
-            Onayla
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-  </v-app>
+                <!-- Product Options Section (Visible only during edit mode) -->
+                <div v-if="product.isEditing" class="mt-3">
+                  <div
+                    class="row g-2 mt-2"
+                    v-for="(option, index) in product.options"
+                    :key="index"
+                  >
+                    <div class="col-10">
+                      <input
+                        type="text"
+                        class="form-control"
+                        v-model="option.name"
+                        placeholder="Seçenek Adı"
+                        required
+                      />
+                    </div>
+                    <div class="col-2 d-flex align-items-center">
+                      <button
+                        type="button"
+                        @click="confirmRemoveOption(product, index)"
+                        class="btn btn-danger btn-sm"
+                      >
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    @click="addOptionToProduct(product)"
+                    class="btn btn-secondary btn-sm mt-2"
+                  >
+                    <i class="bi bi-plus me-1"></i> Seçenek Ekle
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmation Dialog as a Bootstrap Modal -->
+    <div
+      class="modal fade"
+      tabindex="-1"
+      role="dialog"
+      :class="{ show: confirmDialog.show }"
+      :style="{ display: confirmDialog.show ? 'block' : 'none' }"
+    >
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">{{ confirmDialog.message }}</h5>
+            <button
+              type="button"
+              class="btn-close"
+              @click="confirmDialog.show = false"
+            ></button>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="confirmDialog.show = false"
+            >
+              İptal
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              @click="handleConfirm"
+            >
+              Onayla
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Modal backdrop -->
+    <div
+      class="modal-backdrop fade"
+      :class="{ show: confirmDialog.show }"
+      v-if="confirmDialog.show"
+    ></div>
+  </div>
 </template>
 
 <script setup>
@@ -247,13 +256,10 @@ import { useFunctions } from '#imports'
 
 const supabase = useSupabaseClient()
 
-definePageMeta({
-  middleware: 'auth',
-})
-
 // New product form data
 const newProduct = reactive({
   name: '',
+  description: '',
   price: 0,
 })
 
@@ -266,7 +272,7 @@ const { deleteProduct, updateProduct } = useFunctions()
 const products = ref([]) // List of existing products
 const productFormValid = ref(false)
 
-// Validation rules
+// Validation rules (for informational purposes)
 const nameRequired = (value) => !!value || 'Ürün adı gereklidir'
 const priceRequired = (value) => value > 0 || 'Fiyat gereklidir'
 const optionNameRequired = (value) => !!value || 'Seçenek adı gereklidir'

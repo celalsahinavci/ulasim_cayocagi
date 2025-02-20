@@ -8,6 +8,7 @@ const supabase = useSupabaseClient()
 definePageMeta({
   middleware: "auth",
 })
+
 function subscribeToOrders() {
   const ordersChannel = supabase.channel('orders-channel')
     .on(
@@ -36,19 +37,16 @@ function subscribeToOrders() {
     )
     .subscribe()
 
-  // Unsubscribe when the component unmounts to avoid memory leaks
   onUnmounted(() => {
     ordersChannel.unsubscribe()
   })
 }
 
-// Reactive variables to hold data
 const products = ref([])
 const productOptions = ref([])
 const currentOrder = ref([])
 const orders = ref([])
 
-// Table headers for the Sipariş Detayları table
 const orderDetailsHeaders = [
   { text: 'Ürün', value: 'product' },
   { text: 'Adet', value: 'count' },
@@ -56,7 +54,6 @@ const orderDetailsHeaders = [
   { text: 'İşlemler', value: 'actions' }
 ]
 
-// Table headers for the Siparişler table (one row per order)
 const ordersHeaders = [
   { text: 'Sipariş No', value: 'order_id' },
   { text: 'Ürünler', value: 'products' },
@@ -65,7 +62,6 @@ const ordersHeaders = [
   { text: 'Açıklama', value: 'description' }
 ]
 
-// Fetch products from Supabase
 async function fetchProducts() {
   const { data, error } = await supabase.from('products').select('*')
   if (error) {
@@ -75,7 +71,6 @@ async function fetchProducts() {
   }
 }
 
-// Fetch product options from Supabase (assumes a "product_id" field exists)
 async function fetchProductOptions() {
   const { data, error } = await supabase.from('product_options').select('*')
   if (error) {
@@ -85,25 +80,16 @@ async function fetchProductOptions() {
   }
 }
 
-// Get options filtered by the given product id
 function getFilteredOptions(productId, currentItem) {
-  // All options available for this product
-  const optionsForProduct = productOptions.value.filter(
-    option => option.product_id === productId
-  )
-
-  // Get the option IDs already selected in other order items
+  const optionsForProduct = productOptions.value.filter(option => option.product_id === productId)
   const selectedOptionIds = currentOrder.value
     .filter(item => item !== currentItem && item.priority)
     .map(item => item.priority)
 
-  // Return options that are not selected elsewhere.
-  // Allow the currently selected option for this item so that it isn’t removed.
   return optionsForProduct.filter(
     option => !selectedOptionIds.includes(option.id) || currentItem.priority === option.id
   )
 }
-
 
 function handleProductClick(product, toggle) {
   const optionsForProduct = productOptions.value.filter(opt => opt.product_id === product.id);
@@ -116,55 +102,45 @@ function handleProductClick(product, toggle) {
     return;
   }
 
-  // Otherwise, add the product
   currentOrder.value.push({
     product,
     count: 1,
     priority: null
   });
 
-  // If needed, update UI selection state with toggle()
   toggle && toggle();
 }
 
-
-// Remove an item from the current order list
 function cancelOrder(item) {
   currentOrder.value = currentOrder.value.filter(orderItem => orderItem !== item)
 }
 
-// Optionally, display a message if count is less than 1.
 function countErrorMessage(count) {
   return count <= 0 ? 'Adet 1 den küçük olamaz' : ''
 }
 
-// Create a new order and insert order items into Supabase
 const orderDescription = ref('')
 
-// Function to apply all orders and add description
 async function applyAllOrders() {
   if (currentOrder.value.length === 0) {
     console.warn('No order items to save.')
     return
   }
 
-  // Retrieve the current user's ID (adjust based on your auth setup)
   const { data: { user } } = await supabase.auth.getUser()
   const user_id = user ? user.id : null
 
-  // Calculate the total price for the order
   const totalPrice = currentOrder.value.reduce((total, item) => {
     return total + item.count * item.product.price
   }, 0)
 
-  // Insert a new order record in the orders table, including the description
   const { data: orderData, error: orderError } = await supabase
     .from('orders')
     .insert({
       user_id,
       price: totalPrice,
       status: 'beklemede',
-      description: orderDescription.value // Add the description here
+      description: orderDescription.value
     })
     .select()
     .single()
@@ -174,7 +150,6 @@ async function applyAllOrders() {
     return
   }
 
-  // Prepare order items for insertion
   const orderItems = currentOrder.value.map(item => ({
     order_id: orderData.id,
     product_id: item.product.id,
@@ -192,16 +167,11 @@ async function applyAllOrders() {
     return
   }
 
-  // Clear the current order and refresh the orders list
   currentOrder.value = []
   fetchOrders()
   console.log('Order successfully saved!')
 }
 
-
-
-// Fetch orders (with their order items) from Supabase.
-// Group orders so that each order appears as a single row with a summary of items.
 async function fetchOrders() {
   const { data, error } = await supabase
     .from('orders')
@@ -223,25 +193,17 @@ async function fetchOrders() {
   if (error) {
     console.error('Error fetching orders:', error)
   } else {
-    // Get today's date (only date part, no time)
     const today = new Date().toISOString().split('T')[0]
 
-    // Filter orders based on the created_at timestamp
     orders.value = data.filter(order => {
-      // Get the date part of the created_at timestamp
       const createdDate = order.created_at.split('T')[0]
-
-      // Compare with today's date
       return createdDate === today
     }).map(order => {
-      // Build a summary text for all items in the order
       const orderItemsText = order.order_items.map(item => {
         const product = products.value.find(p => p.id === item.product_id)
         const productName = product ? product.name : 'Bilinmeyen Ürün'
-        
         const option = productOptions.value.find(opt => opt.id === item.option_id)
         const optionName = option ? `(${option.name})` : ''
-
         return `${item.quantity}x ${productName} ${optionName}`.trim()
       }).join(', ')
 
@@ -257,15 +219,13 @@ async function fetchOrders() {
   }
 }
 
-
 onMounted(() => {
   fetchProducts()
   fetchProductOptions()
   fetchOrders()
-  subscribeToOrders() // Start listening for realtime updates on orders
+  subscribeToOrders()
 })
 
-// Function to get status color
 const getStatusColor = (status) => {
   switch (status) {
     case 'beklemede':
@@ -281,11 +241,11 @@ const getStatusColor = (status) => {
 </script>
 
 <template>
-  <div class="container-fluid">
-    <div class="row">
+  <div class="container-fluid mt-4">
+    <div class="row g-4">
       <!-- Ürün Menüsü -->
       <div class="col-12 col-md-4 mb-4">
-        <div class="card shadow-sm border-0 mt-4">
+        <div class="card shadow-sm">
           <div class="card-header bg-primary text-white">Ürün Menüsü</div>
           <div class="card-body">
             <div class="row">
@@ -304,40 +264,42 @@ const getStatusColor = (status) => {
       </div>
 
       <!-- Sipariş Detayları -->
-      <div class="col-12 col-md-4 mb-4" >
-        <div class="card shadow-sm border-0 mt-4">
+      <div class="col-12 col-md-4 mb-4">
+        <div class="card shadow-sm">
           <div class="card-header bg-info text-white">Sipariş Detayları</div>
           <div class="card-body">
-            <table class="table table-hover table-bordered">
-              <thead class="table-dark">
-                <tr>
-                  <th>Ürün</th>
-                  <th>Adet</th>
-                  <th>Seçenekler</th>
-                  <th>İşlemler</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in currentOrder" :key="item.product.id">
-                  <td>{{ item.product.name }}</td>
-                  <td>
-                    <input type="number" v-model.number="item.count" min="1" class="form-control w-25">
-                  </td>
-                  <td>
-                    <select v-model="item.priority" class="form-select">
-                      <option v-for="option in getFilteredOptions(item.product.id, item)" :key="option.id" :value="option.id">
-                        {{ option.name }}
-                      </option>
-                    </select>
-                  </td>
-                  <td>
-                    <button class="btn btn-danger btn-sm" @click="cancelOrder(item)">
-                      <i class="bi bi-x-circle"></i> İptal
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="table-responsive">
+              <table class="table table-hover table-bordered">
+                <thead>
+                  <tr>
+                    <th>Ürün</th>
+                    <th>Adet</th>
+                    <th>Seçenekler</th>
+                    <th>İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in currentOrder" :key="item.product.id">
+                    <td>{{ item.product.name }}</td>
+                    <td>
+                      <input type="number" v-model.number="item.count" min="1" class="form-control">
+                    </td>
+                    <td>
+                      <select v-model="item.priority" class="form-select">
+                        <option v-for="option in getFilteredOptions(item.product.id, item)" :key="option.id" :value="option.id">
+                          {{ option.name }}
+                        </option>
+                      </select>
+                    </td>
+                    <td>
+                      <button class="btn btn-danger btn-sm" @click="cancelOrder(item)">
+                        <i class="bi bi-x-circle"></i> İptal
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             <div class="d-flex justify-content-end mt-3">
               <input v-model="orderDescription" class="form-control w-50" placeholder="Sipariş Açıklaması" />
               <button class="btn btn-primary ms-2" @click="applyAllOrders">
@@ -349,34 +311,36 @@ const getStatusColor = (status) => {
       </div>
 
       <!-- Siparişler -->
-      <div class="col-12 col-md-4 mb-4" >
-        <div class="card shadow-sm border-0 mt-4">
+      <div class="col-12 col-md-4 mb-4">
+        <div class="card shadow-sm">
           <div class="card-header bg-success text-white">Siparişler</div>
           <div class="card-body">
-            <table class="table table-hover table-bordered">
-              <thead class="table-dark">
-                <tr>
-                  <th>Sipariş No</th>
-                  <th>Ürünler</th>
-                  <th>Fiyat</th>
-                  <th>Durum</th>
-                  <th>Açıklama</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="order in orders" :key="order.order_id">
-                  <td>{{ order.order_id }}</td>
-                  <td>{{ order.products }}</td>
-                  <td>{{ order.cost }} ₺</td>
-                  <td>
-                    <span :class="'badge rounded-pill bg-' + getStatusColor(order.status)">
-                      {{ order.status }}
-                    </span>
-                  </td>
-                  <td>{{ order.description }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="table-responsive" style="max-height: 400px;">
+              <table class="table table-hover table-bordered">
+                <thead>
+                  <tr>
+                    <th>Sipariş No</th>
+                    <th>Ürünler</th>
+                    <th>Fiyat</th>
+                    <th>Durum</th>
+                    <th>Açıklama</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="order in orders" :key="order.order_id">
+                    <td>{{ order.order_id }}</td>
+                    <td style="word-wrap: break-word;">{{ order.products }}</td>
+                    <td>{{ order.cost }} ₺</td>
+                    <td>
+                      <span :class="'badge rounded-pill bg-' + getStatusColor(order.status)">
+                        {{ order.status }}
+                      </span>
+                    </td>
+                    <td style="word-wrap: break-word;">{{ order.description }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -384,115 +348,145 @@ const getStatusColor = (status) => {
   </div>
 </template>
 
-
 <style scoped>
-.v-toolbar {
-  margin-bottom: 16px;
+/* Global Body Styles */
+body {
+  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
 }
 
-.menu-scrollable {
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
+/* Container Spacing */
+.container-fluid {
+  padding: 2rem;
 }
 
-.card-spacing {
-  margin-bottom: 20px;
+/* Card Styles */
+.card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.menu-card {
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
-  transition: transform 0.2s ease-in-out;
-  flex-grow: 1;
-  margin-top: 5px;
-}
-
-.menu-card:hover {
-  transform: translateY(-4px);
-}
-
-.v-card .text-h6 {
+/* Card Header Styles */
+.card-header {
+  color: #fff;
+  padding: 0.75rem 1rem;
+  font-size: 1.25rem;
+  text-align: center;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
   font-weight: bold;
 }
 
-.v-card img {
+/* Specific Header Colors */
+.card-header.bg-primary {
+  background-color: #007bff !important;
+}
+.card-header.bg-info {
+  background-color: #17a2b8 !important;
+}
+.card-header.bg-success {
+  background-color: #28a745 !important;
+}
+
+/* Card Body */
+.card-body {
+  padding: 1rem;
+  background-color: #fff;
+}
+
+/* Table Styles */
+.table-responsive {
+  border: 1px solid #e0e0e0;
   border-radius: 8px;
+  overflow-y: auto;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-
-.v-btn.error:hover {
-  background-color: #ff5252;
-  transform: scale(1.1);
+.table {
+  margin-bottom: 0;
 }
-
-.v-btn.primary:hover {
-  background-color: #4caf50;
-  transform: scale(1.1);
-}
-
-.v-data-table tbody tr:hover {
-  background-color: #f5f5f5;
-}
-.v-data-table {
-  max-height: 300px; /* Adjust this value as needed */
-  overflow-y: auto; /* Allow scrolling if the content overflows */
-}
-.v-data-table th {
-  background-color: #fafafa;
-  color: #333;
+.table thead th {
+  background-color: #f8f9fa;
+  color: #343a40;
   font-weight: bold;
+  text-align: center;
+  border-bottom: 2px solid #dee2e6;
+}
+.table tbody td {
+  text-align: center;
+  vertical-align: middle;
 }
 
-.v-data-table td {
-  padding: 10px;
+/* Form Controls */
+.form-control,
+.form-select {
+  border-radius: 4px;
+  box-shadow: none;
+  border: 1px solid #ced4da;
+  transition: border-color 0.2s ease;
+}
+.form-control:focus,
+.form-select:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
 }
 
-.count-input {
-  max-width: 80px;
-}
-
-.count-price {
-  margin-left: 10px;
-  font-size: 18px;
-  color: #ff4081;
-  font-weight: bold;
-}
-
-.v-btn {
+/* Button Styles */
+.btn {
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
-
-.v-btn:hover {
-  background-color: #ff4081;
-  transform: scale(1.05);
+.btn:hover {
+  transform: translateY(-2px);
+}
+.btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+.btn-primary:hover {
+  background-color: #0069d9;
+  border-color: #0062cc;
+}
+.btn-danger {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+.btn-danger:hover {
+  background-color: #c82333;
+  border-color: #bd2130;
 }
 
-.rounded-img {
-  border-radius: 8px;
+/* Badge Colors */
+.badge {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+}
+.bg-orange {
+  background-color: #fd7e14 !important;
+}
+.bg-green {
+  background-color: #28a745 !important;
+}
+.bg-red {
+  background-color: #dc3545 !important;
+}
+.bg-grey {
+  background-color: #6c757d !important;
 }
 
-.hover-card {
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.hover-card:hover {
-  transform: translateY(-4px);
-}
-
-.fill-height {
-  height: 100%;
-}
-
-.d-flex {
-  display: flex;
-}
-
-.flex-grow-1 {
-  flex-grow: 1;
-}
-
-.v-col {
-  padding: 0;
-  margin-bottom: 0;
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .container-fluid {
+    padding: 1rem;
+  }
 }
 </style>

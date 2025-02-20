@@ -1,81 +1,82 @@
 <template>
-  <v-container fluid>
-    <v-row>
-      <v-col cols="12">
-        <v-card outlined class="pa-6">
-          <v-card-title class="primary--text text-h6">Siparişlerim</v-card-title>
-          <v-divider></v-divider>
-
+  <div class="container-fluid mt-5">
+    <div class="row">
+      <div class="col-12">
+        <div class="card border-primary mb-3 shadow-sm hover-shadow">
+          <div class="card-header bg-primary text-white">Siparişlerim</div>
+          
           <!-- User Info Section -->
-          <v-card class="pa-4 mb-6">
-            <v-card-title>User Information</v-card-title>
-            <v-card-text>
-              <p><strong>Ad:</strong> {{ userInfo.name }}</p>
-              <p><strong>Email:</strong> {{ userInfo.email }}</p>
-              <p><strong>Joined:</strong> {{ formatDate(userInfo.created_at) }}</p>
-            </v-card-text>
-          </v-card>
+          <div class="card-body">
+            <h5 class="card-title">User Information</h5>
+            <p><strong>Ad:</strong> {{ userInfo.name }}</p>
+            <p><strong>Email:</strong> {{ userInfo.email }}</p>
+            <p><strong>Joined:</strong> {{ formatDate(userInfo.created_at) }}</p>
+          </div>
+        </div>
 
-          <v-card-text>
-            <!-- Summary Cards -->
-            <v-row class="mb-6">
-              <v-col cols="12" md="4">
-                <v-card class="pa-4">
-                  <v-card-title>Total Sipariş</v-card-title>
-                  <v-card-text class="text-h5">{{ totalOrders }}</v-card-text>
-                </v-card>
-              </v-col>
-              <v-col cols="12" md="4">
-                <v-card class="pa-4">
-                  <v-card-title>Toplam Tutar</v-card-title>
-                  <v-card-text class="text-h5">{{ totalSpent }} ₺</v-card-text>
-                </v-card>
-              </v-col>
-              <v-col cols="12" md="4">
-                <v-card class="pa-4">
-                  <v-card-title>Ortalama Sipariş</v-card-title>
-                  <v-card-text class="text-h5">{{ averageOrder }} ₺</v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
+        <!-- Summary Cards -->
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <div class="card text-center shadow-sm hover-shadow">
+              <div class="card-body">
+                <h5 class="card-title">Total Sipariş</h5>
+                <p class="h4">{{ totalOrders }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card text-center shadow-sm hover-shadow">
+              <div class="card-body">
+                <h5 class="card-title">Toplam Tutar</h5>
+                <p class="h4">{{ totalSpent }} ₺</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card text-center shadow-sm hover-shadow">
+              <div class="card-body">
+                <h5 class="card-title">Ortalama Sipariş</h5>
+                <p class="h4">{{ averageOrder }} ₺</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-            <!-- Pie Chart Section -->
-            <v-row class="mb-6">
-              <v-col cols="12">
-                <div class="chart-container">
-                  <canvas id="ordersChart"></canvas>
-                </div>
-              </v-col>
-            </v-row>
+        <!-- Pie Chart Section -->
+        <div class="row mb-3">
+          <div class="col-12">
+            <div class="chart-container">
+              <canvas id="ordersChart"></canvas>
+            </div>
+          </div>
+        </div>
 
-            <!-- Orders Table -->
-            <v-data-table
-              :headers="ordersTableHeaders"
-              :items="orders"
-              class="elevation-1"
-              dense
-            >
-              <template v-slot:item.order_id="{ item }">
-                {{ item.order_id }}
-              </template>
-              <template v-slot:item.products="{ item }">
-                {{ item.products }}
-              </template>
-              <template v-slot:item.cost="{ item }">
-                {{ item.cost }} ₺
-              </template>
-              <template v-slot:item.status="{ item }">
-                <v-chip :color="getStatusColor(item.status)" dark>{{ item.status }}</v-chip>
-              </template>
-              <template v-slot:item.created_at="{ item }">
-                {{ formatDate(item.created_at) }}
-              </template>
-            </v-data-table>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-  </v-container>
+        <!-- Orders Table -->
+        <div class="table-responsive">
+          <table class="table table-bordered table-striped">
+            <thead class="table-primary">
+              <tr>
+                <th scope="col">Sipariş No</th>
+                <th scope="col">Ürünler</th>
+                <th scope="col">Fiyat</th>
+                <th scope="col">Durum</th>
+                <th scope="col">Tarih</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="order in orders" :key="order.order_id" class="table-row-hover">
+                <td>{{ order.order_id }}</td>
+                <td>{{ order.products }}</td>
+                <td>{{ order.cost }} ₺</td>
+                <td><span :class="getStatusClass(order.status)">{{ order.status }}</span></td>
+                <td>{{ formatDate(order.created_at) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -85,70 +86,40 @@ import Chart from 'chart.js/auto'
 import dayjs from 'dayjs'
 
 const supabase = useSupabaseClient()
-
-// Orders and raw order data
 const orders = ref([])
 const rawOrders = ref([])
-const productNames = ref({}) // Stores product names
-const userInfo = ref({}) // Store user information
+const productNames = ref({})
+const userInfo = ref({})
 
-// Table headers
-const ordersTableHeaders = [
-  { text: 'Sipariş No', value: 'order_id' },
-  { text: 'Ürünler', value: 'products' },
-  { text: 'Fiyat', value: 'cost' },
-  { text: 'Durum', value: 'status' },
-  { text: 'Tarih', value: 'created_at' }
-]
-
-// Format date using dayjs
-function formatDate(dateString) {
-  return dayjs(dateString).format('DD/MM/YYYY HH:mm')
+const formatDate = (dateString) => dayjs(dateString).format('DD/MM/YYYY HH:mm')
+const getStatusClass = (status) => {
+  return status === 'beklemede' ? 'badge bg-warning' :
+         status === 'tamamlandı' ? 'badge bg-success' :
+         status === 'iptal' ? 'badge bg-danger' : 'badge bg-secondary'
 }
 
-// Determine color for status chip
-function getStatusColor(status) {
-  switch (status) {
-    case 'beklemede': return 'orange'
-    case 'tamamlandı': return 'green'
-    case 'iptal': return 'red'
-    default: return 'grey'
-  }
-}
-
-// Summary computed properties
 const totalOrders = computed(() => rawOrders.value.length)
-const totalSpent = computed(() => {
-  return rawOrders.value.reduce((sum, order) => sum + order.price, 0)
-})
-const averageOrder = computed(() => {
-  return totalOrders.value > 0 ? (totalSpent.value / totalOrders.value).toFixed(2) : 0
-})
+const totalSpent = computed(() => rawOrders.value.reduce((sum, order) => sum + order.price, 0))
+const averageOrder = computed(() => totalOrders.value > 0 ? (totalSpent.value / totalOrders.value).toFixed(2) : 0)
 
-// Chart.js instance
 let chartInstance = null
 
-// Fetch product names from Supabase
 async function fetchProductNames() {
   const { data, error } = await supabase.from('products').select('id, name')
-  if (error) {
-    console.error("Error fetching product names:", error)
-    return
+  if (!error) {
+    productNames.value = data.reduce((acc, product) => {
+      acc[product.id] = product.name
+      return acc
+    }, {})
   }
-  productNames.value = data.reduce((acc, product) => {
-    acc[product.id] = product.name // Map ID to name
-    return acc
-  }, {})
 }
 
-// Fetch orders for the logged-in user
 async function fetchOrders() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  // Fetch user information
   userInfo.value = {
-    name: user.user_metadata.name || 'No Name', // Name from user_metadata
+    name: user.user_metadata.name || 'No Name',
     email: user.email,
     created_at: user.created_at
   }
@@ -159,90 +130,97 @@ async function fetchOrders() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  if (error) {
-    console.error("Error fetching orders:", error)
-    return
+  if (!error) {
+    rawOrders.value = data
+    orders.value = data.map(order => {
+      const orderItemsText = order.order_items.map(item => {
+        const productName = productNames.value[item.product_id] || `Ürün ${item.product_id}`
+        return `${item.quantity}x ${productName}`
+      }).join(', ')
+      return {
+        order_id: order.id,
+        products: orderItemsText,
+        cost: order.price,
+        status: order.status,
+        created_at: order.created_at
+      }
+    })
+    updateChart()
   }
-
-  rawOrders.value = data
-
-  // Map orders for the table
-  orders.value = data.map(order => {
-    const orderItemsText = order.order_items.map(item => {
-      const productName = productNames.value[item.product_id] || `Ürün ${item.product_id}`
-      return `${item.quantity}x ${productName}`
-    }).join(', ')
-    return {
-      order_id: order.id,
-      products: orderItemsText,
-      cost: order.price,
-      status: order.status,
-      created_at: order.created_at
-    }
-  })
-
-  updateChart()
 }
 
-// Create or update the Pie Chart
 function updateChart() {
   const productCounts = {}
-
   rawOrders.value.forEach(order => {
     order.order_items.forEach(item => {
       const productName = productNames.value[item.product_id] || `Ürün ${item.product_id}`
-      if (!productCounts[productName]) {
-        productCounts[productName] = 0
-      }
-      productCounts[productName] += item.quantity
+      productCounts[productName] = (productCounts[productName] || 0) + item.quantity
     })
   })
 
   const labels = Object.keys(productCounts)
   const dataValues = Object.values(productCounts)
-
-  const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
-  const backgroundColors = labels.map((_, index) => colors[index % colors.length])
+  const backgroundColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
 
   if (chartInstance) {
     chartInstance.data.labels = labels
     chartInstance.data.datasets[0].data = dataValues
-    chartInstance.data.datasets[0].backgroundColor = backgroundColors
     chartInstance.update()
   } else {
     const ctx = document.getElementById('ordersChart').getContext('2d')
     chartInstance = new Chart(ctx, {
       type: 'pie',
-      data: {
-        labels: labels, // Product names
-        datasets: [{
-          label: 'Sipariş Edilen Ürünler',
-          data: dataValues,
-          backgroundColor: backgroundColors,
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: true },
-          title: { display: true, text: 'Sipariş Edilen Ürünler' }
-        }
-      }
+      data: { labels, datasets: [{ data: dataValues, backgroundColor: backgroundColors }] },
+      options: { responsive: true, maintainAspectRatio: false }
     })
   }
 }
 
 onMounted(async () => {
-  await fetchProductNames() // Get product names first
-  await fetchOrders() // Then fetch orders and user info
+  await fetchProductNames()
+  await fetchOrders()
 })
 </script>
 
 <style scoped>
-.chart-container {
-  max-width: 100%;
-  height: 400px;
+/* Navbar */
+.navbar {
+  background-color: #28a745; /* Green color for navbar */
 }
+
+.navbar .navbar-brand {
+  color: white !important;
+}
+
+.navbar .nav-link {
+  color: white !important;
+}
+
+.navbar .nav-link:hover {
+  color: #f1f1f1 !important; /* Light color on hover for nav links */
+}
+
+/* Table */
+.table-primary {
+  background-color: #e2f7e3; /* Light green background for table header */
+}
+
+.table thead th {
+  background-color: #28a745; /* Green background for the table header */
+  color: white; /* White text for better contrast */
+}
+
+.table-striped tbody tr:nth-child(odd) {
+  background-color: #f4fdf4; /* Light green for odd rows */
+}
+
+.table-striped tbody tr:nth-child(even) {
+  background-color: #ffffff; /* White for even rows */
+}
+
+.table tbody tr:hover {
+  background-color: #f1f1f1; /* Slightly darker background on row hover */
+}
+
+
 </style>

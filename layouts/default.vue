@@ -1,26 +1,27 @@
 <template>
-  <v-app>
+  <div class="bg-white text-white">
     <!-- Top Navbar -->
-    <v-app-bar app color="primary" dark>
-      <v-toolbar-title>
-        <NuxtLink to="/">
-          <img src="/icon.png" alt="Logo" class="w-11 h-10" />
-        </NuxtLink>
-      </v-toolbar-title>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container-fluid">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
 
-      <v-spacer></v-spacer>
-
-      
-      <template v-for="(item, index) in filteredMenu" :key="index">
-        <v-btn text :to="item.to">{{ item.title }}</v-btn>
-      </template>
-    </v-app-bar>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li v-for="(item, index) in filteredMenu" :key="index" class="nav-item mr-4">
+              <v-btn class="nav-link" :to="item.to">{{ item.title }}</v-btn>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
 
     <!-- Main content -->
-    <v-main>
+    <div class="container-fluid mt-4">
       <slot />
-    </v-main>
-  </v-app>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -36,7 +37,7 @@ const role = ref(null);
 // Kullanıcının yetkili olduğu sayfalar
 const menuItems = [
   { title: 'Sipariş Oluştur', to: '/CreateOrder', roles: [1,3] },
-  { title: 'Siparişler', to: '/Orders', roles: [1, 2] },
+  { title: 'Siparişlerim', to: '/Orders', roles: [1, 2] },
   { title: 'ÜRÜNLERİ DÜZENLE', to: '/ProductList', roles: [1, 2] },
   { title: 'Profil', to: '/Profile', roles: [1, 2, 3] }, 
 ];
@@ -59,3 +60,16 @@ const filteredMenu = computed(() => {
 
 onMounted(fetchUserRole);
 </script>
+
+<style scoped>
+/* Optional: Additional custom styles */
+.bg-dark {
+  background-color: black !important;
+}
+
+.text-white {
+  color: white !important;
+}
+
+
+</style>
