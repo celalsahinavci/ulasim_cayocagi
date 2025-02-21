@@ -18,13 +18,13 @@
         </button>
 
         <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav ms-auto">
-            <li v-for="(item, index) in filteredMenu" :key="index" class="nav-item">
+          <td class="navbar-nav ms-auto">
+            <th v-for="(item, index) in filteredMenu" :key="index" class="nav-item">
               <v-btn class="nav-link px-3 ml-4" variant="flat" color="green" :to="item.to">
                 {{ item.title }}
               </v-btn>
-            </li>
-          </ul>
+            </th>
+          </td>
         </div>
       </div>
     </nav>
