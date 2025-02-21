@@ -17,7 +17,7 @@ const selectedOrder = ref(null) // Store selected order to deny
 async function fetchOrders() {
   const { data, error } = await supabase
     .from('orders')
-    .select(`id, price, status, created_at, description, status_date`)
+    .select(`id, price, status, created_at, description, status_date, user_id, users(*)`) // Fetching user details as well
     .eq('status', 'beklemede') // Only fetching pending orders
     .order('created_at', { ascending: false })
 
@@ -96,7 +96,7 @@ onMounted(() => {
                     <th>Fiyat</th>
                     <th>Açıklama</th>
                     <th>Durum</th>
-                    <th>Tarih</th>
+                    <th>Sipariş Veren Kullanıcı</th>
                     <th>İşlemler</th>
                   </tr>
                 </thead>
@@ -108,7 +108,7 @@ onMounted(() => {
                     <td>
                       <span class="badge rounded-pill bg-warning">{{ order.status }}</span>
                     </td>
-                    <td>{{ order.status_date ? new Date(order.status_date).toLocaleString() : '' }}</td>
+                    <td>{{ order.users.isim  }}</td>
                     <td>
                       <button class="btn btn-success btn-sm" @click="applyOrder(order.id)">
                         <i class="bi bi-check-circle"></i> Onayla
