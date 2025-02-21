@@ -1,23 +1,35 @@
 <template>
-  <div class="bg-white text-white">
-    <!-- Top Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="bg-light text-dark min-vh-100">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
       <div class="container-fluid">
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <a class="navbar-brand fw-bold" href="/"> MyApp</a>
+
+        <button 
+          class="navbar-toggler" 
+          type="button" 
+          data-bs-toggle="collapse" 
+          data-bs-target="#navbarNav" 
+          aria-controls="navbarNav" 
+          aria-expanded="false" 
+          aria-label="Toggle navigation"
+        >
           <span class="navbar-toggler-icon"></span>
         </button>
 
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto">
-            <li v-for="(item, index) in filteredMenu" :key="index" class="nav-item mr-4">
-              <v-btn class="nav-link" :to="item.to">{{ item.title }}</v-btn>
+            <li v-for="(item, index) in filteredMenu" :key="index" class="nav-item">
+              <v-btn class="nav-link px-3 ml-4" variant="flat" color="green" :to="item.to">
+                {{ item.title }}
+              </v-btn>
             </li>
           </ul>
         </div>
       </div>
     </nav>
 
-    <!-- Main content -->
+    <!-- Main Content -->
     <div class="container-fluid mt-4">
       <slot />
     </div>
@@ -34,15 +46,14 @@ const supabase = useSupabaseClient();
 const user = useSupabaseUser();
 const role = ref(null);
 
-// Kullanıcının yetkili olduğu sayfalar
 const menuItems = [
-  { title: 'Sipariş Oluştur', to: '/CreateOrder', roles: [1,3] },
-  { title: 'Siparişlerim', to: '/Orders', roles: [1, 2] },
+  { title: 'Sipariş Oluştur', to: '/CreateOrder', roles: [1, 3] },
+  { title: 'Siparişler', to: '/Orders', roles: [1, 2] },
   { title: 'ÜRÜNLERİ DÜZENLE', to: '/ProductList', roles: [1, 2] },
   { title: 'Profil', to: '/Profile', roles: [1, 2, 3] }, 
 ];
 
-// Kullanıcının rolünü al
+// Fetch user role
 const fetchUserRole = async () => {
   if (!user.value) return;
   const { data } = await supabase
@@ -53,7 +64,7 @@ const fetchUserRole = async () => {
   if (data) role.value = data.role_id;
 };
 
-// Menüde sadece kullanıcının erişebileceği sayfalar görünecek
+// Filter menu based on role
 const filteredMenu = computed(() => {
   return menuItems.filter((item) => item.roles.includes(role.value));
 });
@@ -62,14 +73,30 @@ onMounted(fetchUserRole);
 </script>
 
 <style scoped>
-/* Optional: Additional custom styles */
-.bg-dark {
-  background-color: black !important;
+/* Navbar improvements */
+.navbar {
+  
+  padding: 0.8rem 1rem;
 }
 
-.text-white {
-  color: white !important;
+.navbar-brand {
+  font-size: 1.4rem;
+  font-weight: bold;
 }
 
+.navbar-nav .nav-link {
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+}
 
+.navbar-nav .nav-link:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Main container */
+.container {
+  padding-top: 1rem;
+}
 </style>
