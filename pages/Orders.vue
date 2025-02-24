@@ -13,12 +13,11 @@ const denialDescription = ref('') // To store the denial description
 const denialModalVisible = ref(false) // To control showing denial modal
 const selectedOrder = ref(null) // Store selected order to deny
 
-// Fetch the orders that are pending and display them
+// Fetch the orders and display them
 async function fetchOrders() {
   const { data, error } = await supabase
     .from('orders')
     .select(`id, price, status, created_at, description, status_date, user_id, users(*)`) // Fetching user details as well
-    .eq('status', 'beklemede') // Only fetching pending orders
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -86,7 +85,7 @@ onMounted(() => {
       <!-- Manage Orders -->
       <div class="col-12 col-md-12 mb-4">
         <div class="card shadow-sm">
-          <div class="card-header bg-success text-white">Pending Orders</div>
+          <div class="card-header bg-success text-white">Orders</div>
           <div class="card-body">
             <div class="table-responsive">
               <table class="table table-hover table-bordered">
@@ -106,14 +105,22 @@ onMounted(() => {
                     <td>{{ order.price }} ₺</td>
                     <td>{{ order.description }}</td>
                     <td>
-                      <span class="badge rounded-pill bg-warning">{{ order.status }}</span>
+                      <!-- Conditional styling based on order status -->
+                      <span :class="{
+                        'badge': true,
+                        'bg-warning': order.status === 'beklemede',
+                        'bg-success': order.status === 'onaylandı',
+                        'bg-danger': order.status === 'reddedildi'
+                      }">
+                        {{ order.status }}
+                      </span>
                     </td>
-                    <td>{{ order.users.isim  }}</td>
+                    <td>{{ order.users.isim }}</td>
                     <td>
-                      <button class="btn btn-success btn-sm" @click="applyOrder(order.id)">
+                      <button class="btn btn-success btn-sm" @click="applyOrder(order.id)" :disabled="order.status !== 'beklemede'">
                         <i class="bi bi-check-circle"></i> Onayla
                       </button>
-                      <button class="btn btn-danger btn-sm ms-2" @click="denyOrder(order.id)">
+                      <button class="btn btn-danger btn-sm ms-2" @click="denyOrder(order.id)" :disabled="order.status !== 'beklemede'">
                         <i class="bi bi-x-circle"></i> İptal Et
                       </button>
                     </td>
